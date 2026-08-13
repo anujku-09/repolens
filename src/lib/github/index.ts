@@ -1,8 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { GitHubRepo } from "@/types";
+import { GitHubRepo, GitTreeItem } from "@/types";
 
 export interface FetchGitHubReposResult {
   repos: GitHubRepo[];
+  error: string | null;
+  isGitHubAuth: boolean;
+}
+
+export interface FetchRepositoryTreeResult {
+  tree: GitTreeItem[];
+  truncated: boolean;
   error: string | null;
   isGitHubAuth: boolean;
 }
@@ -44,7 +51,6 @@ export async function fetchUserGitHubRepos(): Promise<FetchGitHubReposResult> {
         Accept: "application/vnd.github.v3+json",
         "User-Agent": "RepoLens-App",
       },
-      // Ensure server fetches fresh data or revalidates appropriately
       next: { revalidate: 60 },
     });
 
@@ -103,6 +109,113 @@ export async function fetchUserGitHubRepos(): Promise<FetchGitHubReposResult> {
     return {
       repos: [],
       error: "Failed to connect to GitHub API. Network request failed.",
+      isGitHubAuth: true,
+    };
+  }
+}
+
+/**
+ * Server-Side GitHub Git Trees API Fetcher
+ * Securely fetches recursive file tree for a specified repository branch.
+ */
+export async function fetchRepositoryTree(
+  owner: string,
+  repo: string,
+  defaultBranch: string = "main"
+): Promise<FetchRepositoryTreeResult> {
+  const supabase = await createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return { tree: [], truncated: false, error: "Unauthenticated", isGitHubAuth: false };
+  }
+
+  const providerToken = session.provider_token;
+
+  if (!providerToken) {
+    return {
+      tree: [],
+      truncated: false,
+      error: "GitHub OAuth session provider token is unavailable. Please log in with GitHub to ingest repositories.",
+      isGitHubAuth: false,
+    };
+  }
+
+  const branch = defaultBranch || "main";
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(branch)}?recursive=1`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${providerToken}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "RepoLens-App",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return {
+          tree: [],
+          truncated: false,
+          error: `Branch '${branch}' or repository '${owner}/${repo}' not found on GitHub.`,
+          isGitHubAuth: true,
+        };
+      }
+
+      if (response.status === 401) {
+        return {
+          tree: [],
+          truncated: false,
+          error: "GitHub authentication token expired. Re-authenticate via GitHub OAuth.",
+          isGitHubAuth: true,
+        };
+      }
+
+      if (response.status === 403) {
+        return {
+          tree: [],
+          truncated: false,
+          error: "GitHub API rate limit exceeded or access forbidden.",
+          isGitHubAuth: true,
+        };
+      }
+
+      return {
+        tree: [],
+        truncated: false,
+        error: `GitHub Git Trees API returned status ${response.status}`,
+        isGitHubAuth: true,
+      };
+    }
+
+    const data = await response.json();
+
+    if (!data.tree || !Array.isArray(data.tree)) {
+      return {
+        tree: [],
+        truncated: false,
+        error: "Invalid tree response received from GitHub.",
+        isGitHubAuth: true,
+      };
+    }
+
+    return {
+      tree: data.tree as GitTreeItem[],
+      truncated: Boolean(data.truncated),
+      error: null,
+      isGitHubAuth: true,
+    };
+  } catch (err) {
+    console.error("[fetchRepositoryTree Exception]:", err);
+    return {
+      tree: [],
+      truncated: false,
+      error: "Failed to connect to GitHub Git Trees API.",
       isGitHubAuth: true,
     };
   }

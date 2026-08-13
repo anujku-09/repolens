@@ -4,8 +4,7 @@ import { getRepositories } from "@/lib/repositories";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Plus, FolderGit2, ShieldCheck, Star, GitFork, Code } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { ArrowUpRight, Plus, FolderGit2, ShieldCheck, Star, GitFork } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -45,11 +44,11 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* Real Real-Time Stats Overview */}
+      {/* Real-Time Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
         <Card className="border-zinc-800 bg-zinc-900/50 p-6">
           <CardHeader className="p-0">
-            <CardDescription className="text-zinc-400">Total Repositories</CardDescription>
+            <CardDescription className="text-zinc-400">Total Connected Repositories</CardDescription>
             <CardTitle className="text-3xl font-mono text-zinc-100 mt-1">
               {repositories.length}
             </CardTitle>
@@ -58,11 +57,10 @@ export default async function DashboardPage() {
 
         <Card className="border-zinc-800 bg-zinc-900/50 p-6">
           <CardHeader className="p-0">
-            <CardDescription className="text-zinc-400">Database Connection Status</CardDescription>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-mono text-sm font-semibold text-emerald-400">Active (Supabase RLS)</span>
-            </div>
+            <CardDescription className="text-zinc-400">Indexed Repositories</CardDescription>
+            <CardTitle className="text-3xl font-mono text-emerald-400 mt-1">
+              {repositories.filter((r) => r.status === "indexed").length} / {repositories.length}
+            </CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -98,56 +96,69 @@ export default async function DashboardPage() {
         ) : (
           /* Real Repository List Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {repositories.map((repo) => (
-              <Card
-                key={repo.id}
-                className="border-zinc-800 bg-zinc-900/40 p-5 hover:border-zinc-700 transition-colors flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-                        <FolderGit2 className="h-5 w-5" />
+            {repositories.map((repo) => {
+              const status = repo.status || "connected";
+              return (
+                <Card
+                  key={repo.id}
+                  className="border-zinc-800 bg-zinc-900/40 p-5 hover:border-zinc-700 transition-colors flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                          <FolderGit2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-mono text-sm font-semibold text-zinc-100">{repo.full_name}</h3>
+                          <p className="text-xs text-zinc-500">Owner: {repo.owner}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-mono text-sm font-semibold text-zinc-100">{repo.full_name}</h3>
-                        <p className="text-xs text-zinc-500">Owner: {repo.owner}</p>
+
+                      <div className="flex items-center gap-2">
+                        {status === "indexed" && (
+                          <Badge variant="emerald" className="text-[10px]">Indexed</Badge>
+                        )}
+                        {status === "indexing" && (
+                          <Badge variant="amber" className="text-[10px] animate-pulse">Indexing...</Badge>
+                        )}
+                        {status === "connected" && (
+                          <Badge variant="mono" className="text-[10px] text-zinc-400">Connected</Badge>
+                        )}
+                        {status === "failed" && (
+                          <Badge variant="rose" className="text-[10px]">Failed</Badge>
+                        )}
                       </div>
                     </div>
-                    {repo.language && (
-                      <Badge variant="mono" className="text-[10px]">
-                        {repo.language}
-                      </Badge>
+
+                    {repo.description && (
+                      <p className="text-xs text-zinc-400 mt-3 line-clamp-2">{repo.description}</p>
                     )}
                   </div>
 
-                  {repo.description && (
-                    <p className="text-xs text-zinc-400 mt-3 line-clamp-2">{repo.description}</p>
-                  )}
-                </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
+                    <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Star className="h-3 w-3 text-amber-400" />
+                        {repo.stars}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <GitFork className="h-3 w-3 text-sky-400" />
+                        {repo.forks}
+                      </span>
+                    </div>
 
-                <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
-                  <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-500">
-                    <span className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-amber-400" />
-                      {repo.stars}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <GitFork className="h-3 w-3 text-sky-400" />
-                      {repo.forks}
-                    </span>
+                    <Link
+                      href={`/repositories/${repo.id}`}
+                      className="flex items-center gap-1 text-emerald-400 hover:underline font-medium font-mono"
+                    >
+                      <span>View Repository</span>
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-
-                  <Link
-                    href={`/repositories/${repo.id}`}
-                    className="flex items-center gap-1 text-emerald-400 hover:underline font-medium"
-                  >
-                    <span>View Repository</span>
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

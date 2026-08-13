@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript domain models for RepoLens database persistence & GitHub discovery.
+ * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, and File Ingestion.
  */
 
 export interface Profile {
@@ -10,6 +10,8 @@ export interface Profile {
   created_at: string;
   updated_at?: string;
 }
+
+export type RepositoryStatus = "connected" | "indexing" | "indexed" | "failed";
 
 export interface Repository {
   id: string;
@@ -24,6 +26,7 @@ export interface Repository {
   stars: number;
   forks: number;
   default_branch: string;
+  status?: RepositoryStatus;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +42,7 @@ export interface CreateRepositoryInput {
   stars?: number;
   forks?: number;
   default_branch?: string;
+  status?: RepositoryStatus;
 }
 
 export interface UpdateRepositoryInput {
@@ -52,6 +56,7 @@ export interface UpdateRepositoryInput {
   stars?: number;
   forks?: number;
   default_branch?: string;
+  status?: RepositoryStatus;
 }
 
 /**
@@ -72,4 +77,57 @@ export interface GitHubRepo {
   forks_count: number;
   default_branch: string;
   private: boolean;
+}
+
+/**
+ * GitHub Git Trees API Item Structure
+ */
+export interface GitTreeItem {
+  path: string;
+  mode: string;
+  type: "blob" | "tree";
+  size?: number;
+  sha: string;
+  url?: string;
+}
+
+/**
+ * Database Record for public.repository_files
+ */
+export interface RepositoryFile {
+  id: string;
+  repository_id: string;
+  user_id: string;
+  path: string;
+  name: string;
+  type: "file" | "directory";
+  size: number | null;
+  extension: string | null;
+  language: string | null;
+  parent_path: string;
+  depth: number;
+  created_at: string;
+}
+
+export interface RepositoryFileInsert {
+  repository_id: string;
+  user_id: string;
+  path: string;
+  name: string;
+  type: "file" | "directory";
+  size: number | null;
+  extension: string | null;
+  language: string | null;
+  parent_path: string;
+  depth: number;
+}
+
+/**
+ * Ingestion Summary Statistics
+ */
+export interface IngestionSummary {
+  totalFiles: number;
+  totalDirectories: number;
+  totalCodeSize: number;
+  languageBreakdown: Record<string, { count: number; bytes: number }>;
 }

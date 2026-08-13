@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createRepository, getRepositories, deleteRepository } from "@/lib/repositories";
+import { ingestRepositoryTree } from "@/lib/repositories/files";
 import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
@@ -39,6 +40,7 @@ export async function connectGitHubRepositoryAction(githubRepo: GitHubRepo) {
     stars: githubRepo.stargazers_count || 0,
     forks: githubRepo.forks_count || 0,
     default_branch: githubRepo.default_branch || "main",
+    status: "connected",
   };
 
   const { repository, error } = await createRepository(input);
@@ -51,6 +53,23 @@ export async function connectGitHubRepositoryAction(githubRepo: GitHubRepo) {
   revalidatePath("/dashboard");
 
   return { repository, error: null, alreadyConnected: false };
+}
+
+/**
+ * Server Action: Ingest / Re-sync Repository File Tree from GitHub Git Trees API.
+ */
+export async function ingestRepositoryAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+
+  const result = await ingestRepositoryTree(repositoryId);
+
+  revalidatePath("/repositories");
+  revalidatePath(`/repositories/${repositoryId}`);
+  revalidatePath("/dashboard");
+
+  return result;
 }
 
 /**
