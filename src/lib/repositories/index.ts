@@ -56,6 +56,29 @@ export async function getRepositoryById(id: string): Promise<Repository | null> 
   return data as Repository;
 }
 
+export async function getRepositoryByGitHubId(githubRepoId: number): Promise<Repository | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("repositories")
+    .select("*")
+    .eq("github_repo_id", githubRepoId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as Repository;
+}
+
 export async function createRepository(
   input: CreateRepositoryInput
 ): Promise<{ repository: Repository | null; error: string | null }> {
@@ -70,6 +93,7 @@ export async function createRepository(
 
   const newRepo = {
     user_id: user.id, // Derived securely server-side from authenticated user session
+    github_repo_id: input.github_repo_id || null,
     name: input.name.trim(),
     full_name: input.full_name.trim(),
     owner: input.owner.trim(),

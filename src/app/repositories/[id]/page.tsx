@@ -4,9 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getRepositoryById } from "@/lib/repositories";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, GitBranch, Star, GitFork, Calendar, ExternalLink, ShieldCheck, Layers } from "lucide-react";
+import { ArrowLeft, GitBranch, Star, GitFork, Calendar, ExternalLink, Layers } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export default async function RepositoryDetailsPage({
@@ -87,7 +87,7 @@ export default async function RepositoryDetailsPage({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors"
               >
-                <span>GitHub</span>
+                <span>View on GitHub</span>
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             )}
@@ -137,13 +137,19 @@ export default async function RepositoryDetailsPage({
         <Card className="border-zinc-800 bg-zinc-900/40 p-6">
           <div className="flex items-center gap-2 mb-3">
             <Layers className="h-5 w-5 text-emerald-400" />
-            <h3 className="text-base font-semibold text-zinc-100">Repository Details</h3>
+            <h3 className="text-base font-semibold text-zinc-100">Database Record Metadata</h3>
           </div>
           <div className="space-y-3 text-xs font-mono text-zinc-400 border-t border-zinc-800/80 pt-4">
             <div className="flex justify-between border-b border-zinc-800/60 pb-2">
-              <span className="text-zinc-500">Record ID</span>
+              <span className="text-zinc-500">Record UUID</span>
               <span className="text-zinc-200">{repository.id}</span>
             </div>
+            {repository.github_repo_id && (
+              <div className="flex justify-between border-b border-zinc-800/60 pb-2">
+                <span className="text-zinc-500">GitHub Repo ID</span>
+                <span className="text-emerald-400 font-semibold">{repository.github_repo_id}</span>
+              </div>
+            )}
             <div className="flex justify-between border-b border-zinc-800/60 pb-2">
               <span className="text-zinc-500">Owner User ID</span>
               <span className="text-zinc-200">{repository.user_id}</span>
@@ -157,7 +163,7 @@ export default async function RepositoryDetailsPage({
               <span className="text-zinc-200">{repository.default_branch}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-500">RLS Status</span>
+              <span className="text-zinc-500">RLS Enforcement</span>
               <span className="text-emerald-400">Protected &amp; Enforced</span>
             </div>
           </div>

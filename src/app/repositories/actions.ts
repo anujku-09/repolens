@@ -1,32 +1,44 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createRepository, deleteRepository } from "@/lib/repositories";
-import { CreateRepositoryInput } from "@/types";
+import { createRepository, getRepositories, deleteRepository } from "@/lib/repositories";
+import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
- * Server Action: Add a new repository to the database for the authenticated user.
+ * Server Action: Connect a GitHub Repository to RepoLens.
+ * Persists the GitHub repository metadata into the public.repositories table.
+ * Derived user_id is enforced on the server.
  */
-export async function addRepositoryAction(formData: FormData) {
-  const name = (formData.get("name") as string) || "";
-  const owner = (formData.get("owner") as string) || "";
-  const description = (formData.get("description") as string) || "";
-  const language = (formData.get("language") as string) || "TypeScript";
+export async function connectGitHubRepositoryAction(githubRepo: GitHubRepo) {
+  if (!githubRepo || !githubRepo.id || !githubRepo.full_name) {
+    return { error: "Invalid repository payload." };
+  }
 
-  if (!name.trim() || !owner.trim()) {
-    return { error: "Repository name and owner are required." };
+  // Check if repository is already connected for this user
+  const userRepos = await getRepositories();
+  const existingRepo = userRepos.find(
+    (r) => r.github_repo_id === githubRepo.id || r.full_name === githubRepo.full_name
+  );
+
+  if (existingRepo) {
+    return {
+      repository: existingRepo,
+      error: null,
+      alreadyConnected: true,
+    };
   }
 
   const input: CreateRepositoryInput = {
-    name: name.trim(),
-    full_name: `${owner.trim()}/${name.trim()}`,
-    owner: owner.trim(),
-    description: description.trim() || null,
-    language: language.trim() || "TypeScript",
-    stars: 0,
-    forks: 0,
-    default_branch: "main",
-    url: `https://github.com/${owner.trim()}/${name.trim()}`,
+    github_repo_id: githubRepo.id,
+    name: githubRepo.name,
+    full_name: githubRepo.full_name,
+    owner: githubRepo.owner?.login || "",
+    url: githubRepo.html_url,
+    description: githubRepo.description,
+    language: githubRepo.language,
+    stars: githubRepo.stargazers_count || 0,
+    forks: githubRepo.forks_count || 0,
+    default_branch: githubRepo.default_branch || "main",
   };
 
   const { repository, error } = await createRepository(input);
@@ -37,11 +49,12 @@ export async function addRepositoryAction(formData: FormData) {
 
   revalidatePath("/repositories");
   revalidatePath("/dashboard");
-  return { repository, error: null };
+
+  return { repository, error: null, alreadyConnected: false };
 }
 
 /**
- * Server Action: Delete a repository by ID.
+ * Server Action: Disconnect / Delete a repository.
  */
 export async function deleteRepositoryAction(id: string) {
   const { success, error } = await deleteRepository(id);
