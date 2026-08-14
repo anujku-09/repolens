@@ -20,7 +20,7 @@ interface DependencyMetricsCardProps {
 }
 
 export function DependencyMetricsCard({ summary }: DependencyMetricsCardProps) {
-  const [activeModal, setActiveModal] = useState<"packages" | "cycles" | null>(null);
+  const [activeModal, setActiveModal] = useState<"packages" | "cycles" | "most" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredPackages = useMemo(() => {
@@ -54,14 +54,23 @@ export function DependencyMetricsCard({ summary }: DependencyMetricsCardProps) {
 
         {/* Clickable Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-4">
-          <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 transition-colors">
-            <span className="text-[11px] text-zinc-500 uppercase">Internal Dependencies</span>
+          {/* Internal Dependencies Card */}
+          <div
+            onClick={() => setActiveModal("most")}
+            className="rounded-lg bg-zinc-950 p-3 border border-purple-500/30 hover:border-purple-500/60 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-zinc-500 uppercase group-hover:text-purple-400 transition-colors">
+                Internal Edges
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-purple-400 transition-colors" />
+            </div>
             <p className="text-xl font-bold text-purple-400 mt-0.5">
               {summary.internalDependencies}
             </p>
           </div>
 
-          {/* Clickable External Packages Card */}
+          {/* External Packages Card */}
           <div
             onClick={() => setActiveModal("packages")}
             className="rounded-lg bg-zinc-950 p-3 border border-sky-500/30 hover:border-sky-500/60 transition-colors cursor-pointer group"
@@ -77,14 +86,23 @@ export function DependencyMetricsCard({ summary }: DependencyMetricsCardProps) {
             </p>
           </div>
 
-          <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 transition-colors">
-            <span className="text-[11px] text-zinc-500 uppercase">Unresolved Imports</span>
+          {/* Unresolved Imports Card */}
+          <div
+            onClick={() => setActiveModal("packages")}
+            className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 hover:border-amber-500/50 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-zinc-500 uppercase group-hover:text-amber-400 transition-colors">
+                Unresolved Imports
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-amber-400 transition-colors" />
+            </div>
             <p className="text-xl font-bold text-amber-400 mt-0.5">
               {summary.unresolvedDependencies}
             </p>
           </div>
 
-          {/* Clickable Circular Cycles Card */}
+          {/* Circular Cycles Card */}
           <div
             onClick={() => {
               if (summary.circularDependencyCount > 0) setActiveModal("cycles");
@@ -203,6 +221,49 @@ export function DependencyMetricsCard({ summary }: DependencyMetricsCardProps) {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Most Imported Files Modal */}
+      {activeModal === "most" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 sm:p-6">
+          <div className="w-full max-w-3xl max-h-[85vh] rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl flex flex-col overflow-hidden font-sans">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-3.5 bg-zinc-900/90">
+              <div className="flex items-center gap-2.5">
+                <GitFork className="h-5 w-5 text-purple-400" />
+                <div>
+                  <h3 className="font-mono text-sm font-semibold text-zinc-100">
+                    Internal Dependency Distribution
+                  </h3>
+                  <p className="text-[11px] font-mono text-zinc-400">
+                    Most depended-on files across repository.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-xs custom-scrollbar">
+              {summary.mostImportedFiles?.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 rounded-lg border border-zinc-800 bg-zinc-900/60"
+                >
+                  <span className="text-zinc-200 truncate">{file.path}</span>
+                  <span className="bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 rounded text-purple-300 font-bold shrink-0">
+                    {file.count} imports
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

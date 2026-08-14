@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { SymbolGraphSummary, SymbolKind } from "@/types";
+import { SymbolGraphSummary } from "@/types";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Code2,
   AlertTriangle,
   Search,
   X,
-  ExternalLink,
   ChevronRight,
   ArrowRight,
+  Share2,
+  CheckCircle2,
   Layers,
 } from "lucide-react";
 
@@ -44,6 +44,10 @@ export function SymbolIntelligenceCard({
     setActiveModal(null);
     if (onSelectFilePath) {
       onSelectFilePath(path);
+    } else {
+      // Smooth scroll to file tree explorer
+      const el = document.getElementById("file-tree-explorer-section");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -69,30 +73,57 @@ export function SymbolIntelligenceCard({
           )}
         </div>
 
-        {/* Clickable Metrics Grid */}
+        {/* Every Metric Card is Clickable with Hover Effects */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-4">
-          <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 transition-colors">
-            <span className="text-[11px] text-zinc-500 uppercase">Defined Symbols</span>
+          {/* Defined Symbols Card */}
+          <div
+            onClick={() => setActiveModal("unused")}
+            className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 hover:border-amber-500/50 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-zinc-500 uppercase group-hover:text-amber-400 transition-colors">
+                Defined Symbols
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-amber-400 transition-colors" />
+            </div>
             <p className="text-xl font-bold text-amber-400 mt-0.5">
               {symbolSummary.totalDefinedSymbols}
             </p>
           </div>
 
-          <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 transition-colors">
-            <span className="text-[11px] text-zinc-500 uppercase">Exported Symbols</span>
+          {/* Exported Symbols Card */}
+          <div
+            onClick={() => setActiveModal("unused")}
+            className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 hover:border-emerald-500/50 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-zinc-500 uppercase group-hover:text-emerald-400 transition-colors">
+                Exported Symbols
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-emerald-400 transition-colors" />
+            </div>
             <p className="text-xl font-bold text-emerald-400 mt-0.5">
               {symbolSummary.exportedSymbolsCount}
             </p>
           </div>
 
-          <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 transition-colors">
-            <span className="text-[11px] text-zinc-500 uppercase">Reference Edges</span>
+          {/* Reference Edges Card */}
+          <div
+            onClick={() => setActiveModal("unused")}
+            className="rounded-lg bg-zinc-950 p-3 border border-zinc-800 hover:border-sky-500/50 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-zinc-500 uppercase group-hover:text-sky-400 transition-colors">
+                Reference Edges
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-sky-400 transition-colors" />
+            </div>
             <p className="text-xl font-bold text-sky-400 mt-0.5">
               {symbolSummary.symbolReferencesCount}
             </p>
           </div>
 
-          {/* Clickable Unused Exports Card */}
+          {/* Unused Exports Card */}
           <div
             onClick={() => setActiveModal("unused")}
             className="rounded-lg bg-zinc-950 p-3 border border-rose-500/30 hover:border-rose-500/60 transition-colors cursor-pointer group"
@@ -204,7 +235,7 @@ export function SymbolIntelligenceCard({
                       onClick={() => handleNavigateToFile(item.defining_path)}
                       variant="outline"
                       size="sm"
-                      className="h-7 px-2.5 text-[11px] font-mono gap-1 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 border-zinc-700 shrink-0"
+                      className="h-7 px-2.5 text-[11px] font-mono gap-1 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 border-zinc-700 shrink-0 cursor-pointer"
                     >
                       <span>Inspect File</span>
                       <ArrowRight className="h-3 w-3 text-amber-400" />
