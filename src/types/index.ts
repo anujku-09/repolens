@@ -447,3 +447,52 @@ export interface RepositoryArchitectureScore {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * Feature 9: Change Impact Analysis Domain Types
+ */
+export type ImpactRisk = "low" | "medium" | "high" | "critical";
+
+export interface AffectedFileItem {
+  id: string;
+  path: string;
+  name: string;
+  depth: number;
+}
+
+export interface AffectedSymbolItem {
+  symbol_name: string;
+  kind: SymbolKind;
+  defining_path: string;
+  reference_count: number;
+}
+
+export interface AffectedComponentItem {
+  name: string;
+  path: string;
+}
+
+export interface AffectedRouteItem {
+  route_path: string;
+  file_path: string;
+}
+
+export interface ChangeImpactResult {
+  targetFile: { id: string; path: string; name: string };
+  risk: ImpactRisk;
+  reasons: string[];
+  directDependents: AffectedFileItem[];
+  transitiveDependents: AffectedFileItem[];
+  affectedSymbols: AffectedSymbolItem[];
+  affectedComponents: AffectedComponentItem[];
+  affectedRoutes: AffectedRouteItem[];
+  inCircularCycle: boolean;
+  stats: {
+    directCount: number;
+    transitiveCount: number;
+    totalAffectedCount: number;
+    maxDepth: number;
+    fanIn: number;
+    fanOut: number;
+  };
+}

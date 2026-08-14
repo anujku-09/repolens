@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, MouseEvent } from "react";
-import { SerializedGraphData } from "@/types";
+import { SerializedGraphData, ChangeImpactResult } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import {
   FileCode,
@@ -29,6 +29,7 @@ interface CodebaseVisualizerProps {
   graphData?: SerializedGraphData | null;
   repositoryFullName?: string;
   defaultBranch?: string;
+  impactResult?: ChangeImpactResult | null;
 }
 
 export type LayoutMode = "concentric" | "columns";
@@ -48,6 +49,7 @@ export function CodebaseVisualizer({
   graphData,
   repositoryFullName = "repository",
   defaultBranch = "main",
+  impactResult = null,
 }: CodebaseVisualizerProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -595,8 +597,23 @@ export function CodebaseVisualizer({
                 const isSelected = selectedNode?.path === node.path;
                 const isConnected = connectedPaths.has(node.path);
 
-                // Color code nodes logically by layer / type
-                const nodeColor = node.path.includes("/components/")
+                // Feature 9: Impact Analysis Styling Overrides
+                let isTargetNode = false;
+                let isDirectNode = false;
+                let isTransitiveNode = false;
+                let isImpactMode = false;
+
+                if (impactResult) {
+                  isImpactMode = true;
+                  isTargetNode = node.path === impactResult.targetFile.path || node.id === impactResult.targetFile.id;
+                  isDirectNode = impactResult.directDependents.some((d) => d.path === node.path || d.id === node.id);
+                  isTransitiveNode = impactResult.transitiveDependents.some((t) => t.path === node.path || t.id === node.id);
+                }
+
+                const isAffectedByImpact = isTargetNode || isDirectNode || isTransitiveNode;
+
+                // Color code nodes logically by layer / type or impact role
+                let nodeColor = node.path.includes("/components/")
                   ? "#34d399" // Emerald for components
                   : node.path.includes("/lib/") || node.path.includes("/types/")
                   ? "#c084fc" // Purple for core logic
@@ -604,52 +621,62 @@ export function CodebaseVisualizer({
                   ? "#fbbf24" // Amber for configs/styles
                   : "#38bdf8"; // Cyan for pages/routes
 
+                if (isImpactMode) {
+                  if (isTargetNode) nodeColor = "#f43f5e"; // Rose red for target
+                  else if (isDirectNode) nodeColor = "#fb7185"; // Soft rose for direct (L1)
+                  else if (isTransitiveNode) nodeColor = "#fbbf24"; // Amber for transitive (L2+)
+                  else nodeColor = "#52525b"; // Dim gray for unrelated
+                }
+
+                const nodeOpacity = isImpactMode ? (isAffectedByImpact ? 1.0 : 0.15) : 1.0;
+
                 return (
                   <g
                     key={node.id}
                     transform={`translate(${node.x}, ${node.y})`}
+                    opacity={nodeOpacity}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedNodeId(node.id);
                     }}
                     onMouseEnter={() => setHoveredNodeId(node.id)}
                     onMouseLeave={() => setHoveredNodeId(null)}
-                    className="cursor-pointer"
+                    className="cursor-pointer transition-opacity duration-300"
                   >
-                    {/* Glowing Selection Aura */}
-                    {isSelected && (
+                    {/* Glowing Selection / Target Aura */}
+                    {(isSelected || isTargetNode) && (
                       <circle
-                        r="20"
+                        r={isTargetNode ? "24" : "20"}
                         fill={nodeColor}
-                        fillOpacity="0.2"
+                        fillOpacity={isTargetNode ? "0.35" : "0.2"}
                         stroke={nodeColor}
-                        strokeWidth="2"
+                        strokeWidth="2.5"
                         filter="url(#glow-cyan)"
                       />
                     )}
 
                     {/* Outer Ring */}
                     <circle
-                      r={isSelected ? 14 : isConnected ? 10 : 8}
+                      r={isTargetNode ? 16 : isSelected ? 14 : isDirectNode ? 12 : isConnected ? 10 : 8}
                       fill={nodeColor}
-                      fillOpacity={isSelected ? 0.4 : isConnected ? 0.25 : 0.15}
+                      fillOpacity={isTargetNode ? 0.6 : isSelected ? 0.4 : isDirectNode ? 0.35 : isConnected ? 0.25 : 0.15}
                       stroke={nodeColor}
-                      strokeWidth={isSelected ? 3 : isConnected ? 2 : 1}
+                      strokeWidth={isTargetNode ? 3.5 : isSelected ? 3 : isDirectNode ? 2.5 : isConnected ? 2 : 1}
                     />
 
                     {/* Center Core Dot */}
-                    <circle r={isSelected ? 5 : 3.5} fill={nodeColor} />
+                    <circle r={isTargetNode ? 6 : isSelected ? 5 : 3.5} fill={nodeColor} />
 
                     {/* Node Label Text with Directory Context */}
                     <text
-                      y={isSelected ? 26 : 20}
+                      y={isTargetNode ? 28 : isSelected ? 26 : 20}
                       textAnchor="middle"
-                      fill={isSelected ? "#f4f4f5" : isConnected ? "#e4e4e7" : "#71717a"}
-                      fontSize={isSelected ? "11" : "9"}
+                      fill={isTargetNode ? "#ffe4e6" : isSelected ? "#f4f4f5" : isAffectedByImpact ? "#f4f4f5" : isConnected ? "#e4e4e7" : "#71717a"}
+                      fontSize={isTargetNode ? "12" : isSelected ? "11" : "9"}
                       fontFamily="monospace"
-                      fontWeight={isSelected ? "bold" : "normal"}
+                      fontWeight={isTargetNode || isSelected || isAffectedByImpact ? "bold" : "normal"}
                     >
-                      {node.displayLabel}
+                      {isTargetNode ? `🎯 ${node.displayLabel}` : isDirectNode ? `L1: ${node.displayLabel}` : node.displayLabel}
                     </text>
                   </g>
                 );

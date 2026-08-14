@@ -6,8 +6,10 @@ import {
   RepositoryFileAnalysis,
   SerializedGraphData,
   GraphNode,
+  ChangeImpactResult,
 } from "@/types";
-import { getFileSourceAction } from "@/app/repositories/actions";
+import { getFileSourceAction, analyzeFileImpactAction } from "@/app/repositories/actions";
+import { ChangeImpactPanel } from "@/components/repositories/change-impact-panel";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ import {
   Copy,
   Check,
   X,
+  Flame,
 } from "lucide-react";
 import { isAnalyzableSourceFile } from "@/lib/ingestion/source-policy";
 
@@ -99,6 +102,11 @@ export function FileTreeExplorer({
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(
     () => new Set(files.filter((f) => f.depth <= 1).map((f) => f.path))
   );
+
+  // Feature 9: Change Impact Analysis State
+  const [impactResult, setImpactResult] = useState<ChangeImpactResult | null>(null);
+  const [isAnalyzingImpact, setIsAnalyzingImpact] = useState(false);
+  const [impactError, setImpactError] = useState<string | null>(null);
 
   // Source Viewer Modal State
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -231,6 +239,28 @@ export function FileTreeExplorer({
     navigator.clipboard.writeText(sourceCode);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  // Feature 9: Handler to compute Change Impact Analysis
+  const handleAnalyzeImpact = async () => {
+    if (!selectedFile || selectedFile.type !== "file") return;
+    setIsAnalyzingImpact(true);
+    setImpactError(null);
+    setImpactResult(null);
+
+    try {
+      const res = await analyzeFileImpactAction(selectedFile.repository_id, selectedFile.id);
+      if (!res.success || !res.result) {
+        setImpactError(res.error || "Failed to calculate change impact analysis.");
+      } else {
+        setImpactResult(res.result);
+      }
+    } catch (err) {
+      console.error("[handleAnalyzeImpact Error]:", err);
+      setImpactError("An error occurred while evaluating change impact.");
+    } finally {
+      setIsAnalyzingImpact(false);
+    }
   };
 
   const renderTreeNode = (node: TreeNode, depth = 0) => {
@@ -391,15 +421,38 @@ export function FileTreeExplorer({
               <HardDrive className="h-4 w-4 text-emerald-400" />
               <h3 className="text-sm font-semibold text-zinc-100">Specific File Inspector</h3>
             </div>
-            {selectedFile && ingestedFileIds.has(selectedFile.id) && (
-              <Button
-                onClick={handleOpenSourceViewer}
-                size="sm"
-                className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-7 px-2.5 shadow-sm gap-1 cursor-pointer font-mono"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                <span>View Source Code</span>
-              </Button>
+            {selectedFile && selectedFile.type === "file" && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {ingestedFileIds.has(selectedFile.id) && (
+                  <Button
+                    onClick={handleOpenSourceViewer}
+                    size="sm"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-7 px-2.5 shadow-sm gap-1 cursor-pointer font-mono"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>View Source</span>
+                  </Button>
+                )}
+
+                <Button
+                  onClick={handleAnalyzeImpact}
+                  disabled={isAnalyzingImpact}
+                  size="sm"
+                  className="bg-rose-500 hover:bg-rose-400 text-zinc-950 font-semibold text-xs h-7 px-2.5 shadow-sm gap-1 cursor-pointer font-mono"
+                >
+                  {isAnalyzingImpact ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Analyzing Impact...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Flame className="h-3.5 w-3.5" />
+                      <span>Analyze Change Impact</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
 
@@ -665,6 +718,21 @@ export function FileTreeExplorer({
           </span>
         </div>
       </Card>
+
+      {/* Feature 9: Change Impact Error Alert */}
+      {impactError && (
+        <div className="col-span-1 lg:col-span-12 mt-4 flex items-center gap-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300 font-mono">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+          <span>{impactError}</span>
+        </div>
+      )}
+
+      {/* Feature 9: Change Impact Analysis Panel */}
+      {impactResult && (
+        <div className="col-span-1 lg:col-span-12 mt-6">
+          <ChangeImpactPanel impact={impactResult} />
+        </div>
+      )}
 
       {/* Interactive Source Code Viewer Modal */}
       {isViewerOpen && selectedFile && (

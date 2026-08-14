@@ -8,6 +8,7 @@ import { analyzeRepository } from "@/lib/analysis/analyze-repository";
 import { buildRepositoryDependencyGraph } from "@/lib/analysis/dependency/build-graph";
 import { buildRepositorySymbols } from "@/lib/analysis/symbols/build-symbols";
 import { buildRepositoryArchitectureScore } from "@/lib/analysis/architecture/score-architecture";
+import { analyzeFileImpact } from "@/lib/analysis/impact/analyze-impact";
 import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
@@ -179,4 +180,15 @@ export async function getFileSourceAction(fileId: string) {
     return { content: null, size: null, error: "Missing file ID." };
   }
   return await getSingleFileContent(fileId);
+}
+
+/**
+ * Server Action: Analyze Change Impact & Blast Radius for a Selected Target File (Feature 9).
+ * Authenticates user server-side and enforces repository ownership RLS.
+ */
+export async function analyzeFileImpactAction(repositoryId: string, fileId: string) {
+  if (!repositoryId || !fileId) {
+    return { success: false, error: "Missing repository ID or file ID." };
+  }
+  return await analyzeFileImpact(repositoryId, fileId);
 }
