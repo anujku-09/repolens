@@ -36,10 +36,12 @@ export async function getRepositoryFiles(repositoryId: string): Promise<Reposito
 
 /**
  * Bulk Insert repository file records into public.repository_files in batches to avoid payload limits.
+ * Uses the authenticated server Supabase client carrying the user's JWT session.
  */
-async function bulkInsertRepositoryFiles(records: RepositoryFileInsert[]): Promise<{ error: string | null }> {
-  const supabase = await createClient();
-
+async function bulkInsertRepositoryFiles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  records: RepositoryFileInsert[]
+): Promise<{ error: string | null }> {
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const chunk = records.slice(i, i + BATCH_SIZE);
     const { error } = await supabase.from("repository_files").insert(chunk);
@@ -70,7 +72,7 @@ export async function ingestRepositoryTree(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!user || !user.id) {
     return { success: false, error: "Unauthorized: Please log in first." };
   }
 
@@ -103,6 +105,13 @@ export async function ingestRepositoryTree(
       treeResult.tree
     );
 
+    // Sanitize records to guarantee user_id & repository_id match authenticated user
+    const sanitizedRecords: RepositoryFileInsert[] = records.map((r) => ({
+      ...r,
+      repository_id: repositoryId,
+      user_id: user.id,
+    }));
+
     // 4. Delete existing file records for this repository
     const { error: deleteError } = await supabase
       .from("repository_files")
@@ -115,8 +124,8 @@ export async function ingestRepositoryTree(
       return { success: false, error: "Failed to clear previous file records." };
     }
 
-    // 5. Bulk insert records in batches
-    const { error: insertError } = await bulkInsertRepositoryFiles(records);
+    // 5. Bulk insert records in batches using the authenticated client
+    const { error: insertError } = await bulkInsertRepositoryFiles(supabase, sanitizedRecords);
 
     if (insertError) {
       await updateRepository(repositoryId, { status: "failed" });

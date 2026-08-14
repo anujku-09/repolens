@@ -58,7 +58,7 @@ export function detectExtension(filename: string): string | null {
   const parts = filename.split("/");
   const baseName = parts[parts.length - 1];
 
-  if (!baseName || baseName.startsWith(".") && !baseName.includes(".", 1)) {
+  if (!baseName || (baseName.startsWith(".") && !baseName.includes(".", 1))) {
     // Handle dotfiles like .gitignore
     return baseName.startsWith(".") ? baseName.toLowerCase() : null;
   }
@@ -114,7 +114,7 @@ export function parseGitTreeToRepositoryFiles(
   const ensureDirectoryExists = (dirPath: string) => {
     if (!dirPath || recordMap.has(dirPath)) return;
 
-    const pathSegments = dirPath.split("/");
+    const pathSegments = dirPath.split("/").filter(Boolean);
     let currentPath = "";
 
     for (let i = 0; i < pathSegments.length; i++) {
@@ -147,10 +147,12 @@ export function parseGitTreeToRepositoryFiles(
       continue;
     }
 
-    const segments = item.path.split("/");
+    const segments = item.path.split("/").filter(Boolean);
+    if (segments.length === 0) continue;
+
     const name = segments[segments.length - 1];
     const depth = segments.length - 1;
-    const parentPath = segments.slice(0, -1).join("");
+    const parentPath = segments.slice(0, -1).join("/");
 
     // Ensure parent directories exist
     if (parentPath) {
