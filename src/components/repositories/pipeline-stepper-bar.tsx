@@ -145,34 +145,32 @@ export function PipelineStepperBar({
             return (
               <div
                 key={step.id}
-                className={`flex flex-col justify-between rounded-lg p-3 border transition-all ${
+                className={`flex flex-col h-full rounded-lg p-3 border transition-all ${
                   step.isComplete
                     ? "bg-zinc-950/80 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]"
                     : "bg-zinc-950/40 border-zinc-800/80"
                 }`}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Icon className={`h-3.5 w-3.5 ${step.iconColor}`} />
-                      <span className="text-xs font-bold text-zinc-200 font-mono">
-                        {step.title}
-                      </span>
-                    </div>
-                    {step.isComplete ? (
-                      <Badge variant="emerald" className="font-mono text-[9px] px-1.5 py-0 flex items-center gap-1">
-                        <CheckCircle2 className="h-2.5 w-2.5" />
-                        <span>{step.statusText}</span>
-                      </Badge>
-                    ) : (
-                      <Badge variant="mono" className="font-mono text-[9px] text-zinc-500 px-1.5 py-0">
-                        {step.statusText}
-                      </Badge>
-                    )}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className={`h-3.5 w-3.5 ${step.iconColor}`} />
+                    <span className="text-xs font-bold text-zinc-200 font-mono">
+                      {step.title}
+                    </span>
                   </div>
+                  {step.isComplete ? (
+                    <Badge variant="emerald" className="font-mono text-[9px] px-1.5 py-0 flex items-center gap-1">
+                      <CheckCircle2 className="h-2.5 w-2.5" />
+                      <span>{step.statusText}</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="font-mono text-[9px] text-zinc-500 px-1.5 py-0">
+                      {step.statusText}
+                    </Badge>
+                  )}
                 </div>
 
-                <div className="mt-2.5 pt-2 border-t border-zinc-800/60">
+                <div className="mt-auto pt-2.5 border-t border-zinc-800/60">
                   {step.button}
                 </div>
               </div>

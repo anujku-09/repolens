@@ -54,7 +54,7 @@ export function SymbolResolutionButton({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <Button
         onClick={handleResolve}
         disabled={isLoading || isPending || disabled}
@@ -80,7 +80,7 @@ export function SymbolResolutionButton({
 
       {/* Summary Feedback Banner */}
       {summary && (
-        <div className="flex flex-col justify-between min-h-[120px] rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300 font-mono">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300 font-mono space-y-1.5">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-amber-400" />
             <p className="font-semibold text-zinc-100">Symbol Graph Resolved!</p>
