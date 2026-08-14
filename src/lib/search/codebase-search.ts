@@ -104,7 +104,7 @@ export async function searchCodebase(
             path: f.path,
             name: f.name,
             language: f.language,
-            size: f.size,
+            size: f.size ?? 0,
             functionsCount: astMeta?.fCount || 0,
             componentsCount: astMeta?.cCount || 0,
             exportedSymbolsCount: astMeta?.eCount || 0,
