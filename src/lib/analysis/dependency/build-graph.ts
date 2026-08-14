@@ -310,26 +310,18 @@ export async function getSerializedDependencyGraph(
     });
   });
 
-  // Filter nodes to files that either have edges or are analyzable code files
-  const activeFileIds = new Set<string>();
-  depsData.forEach((d) => {
-    activeFileIds.add(d.source_file_id);
-    activeFileIds.add(d.target_file_id);
-  });
-
-  const nodes: GraphNode[] = codeFiles
-    .filter((f) => activeFileIds.size === 0 || activeFileIds.has(f.id))
-    .map((f) => ({
-      id: f.id,
-      path: f.path,
-      name: f.name,
-      language: f.language,
-      size: f.size,
-      inDegree: inDegreeMap.get(f.id) || 0,
-      outDegree: outDegreeMap.get(f.id) || 0,
-      imports: Array.from(importsMap.get(f.id) || []),
-      importedBy: Array.from(importedByMap.get(f.id) || []),
-    }));
+  // Include all code files in nodes list (do not strip zero-edge files)
+  const nodes: GraphNode[] = codeFiles.map((f) => ({
+    id: f.id,
+    path: f.path,
+    name: f.name,
+    language: f.language,
+    size: f.size,
+    inDegree: inDegreeMap.get(f.id) || 0,
+    outDegree: outDegreeMap.get(f.id) || 0,
+    imports: Array.from(importsMap.get(f.id) || []),
+    importedBy: Array.from(importedByMap.get(f.id) || []),
+  }));
 
   const circularCycles = detectCircularDependencies(
     edges.map((e) => ({ sourcePath: e.source, targetPath: e.target }))

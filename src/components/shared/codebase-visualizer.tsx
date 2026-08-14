@@ -17,14 +17,26 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
-  Maximize,
   Move,
+  Filter,
+  Eye,
 } from "lucide-react";
 
 interface CodebaseVisualizerProps {
   graphData?: SerializedGraphData | null;
   repositoryFullName?: string;
   defaultBranch?: string;
+}
+
+/**
+ * Computes a clean short path label for SVG node rendering that includes parent directory context
+ * (e.g. "src/app/repositories/[id]/page.tsx" -> "repositories/[id]/page.tsx")
+ */
+function getShortPathLabel(fullPath: string): string {
+  if (!fullPath) return "";
+  const parts = fullPath.replace(/\\/g, "/").replace(/^\/+/, "").split("/");
+  if (parts.length <= 2) return fullPath;
+  return parts.slice(-2).join("/");
 }
 
 export function CodebaseVisualizer({
@@ -39,6 +51,7 @@ export function CodebaseVisualizer({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [showConnectedOnly, setShowConnectedOnly] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -46,17 +59,23 @@ export function CodebaseVisualizer({
   const edges = graphData?.edges || [];
   const summary = graphData?.summary || null;
 
-  // Filter nodes based on search query
+  // Filter nodes based on search query & connected-only toggle
   const filteredNodes = useMemo(() => {
-    if (!searchQuery.trim()) return nodes;
+    let list = nodes;
+
+    if (showConnectedOnly) {
+      list = list.filter((n) => n.inDegree > 0 || n.outDegree > 0);
+    }
+
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return nodes.filter(
+    return list.filter(
       (n) =>
         n.name.toLowerCase().includes(q) ||
         n.path.toLowerCase().includes(q) ||
         (n.language && n.language.toLowerCase().includes(q))
     );
-  }, [nodes, searchQuery]);
+  }, [nodes, searchQuery, showConnectedOnly]);
 
   // Find currently selected node object
   const selectedNode = useMemo(() => {
@@ -74,14 +93,14 @@ export function CodebaseVisualizer({
     return set;
   }, [selectedNode]);
 
-  // Calculate intelligent multi-ring concentric layout coordinates
+  // Calculate multi-ring concentric layout coordinates for ALL filtered nodes
   const layoutNodes = useMemo(() => {
-    const list = filteredNodes.slice(0, 50); // Max 50 nodes visual limit
+    const list = filteredNodes; // Render ALL matching nodes
     const count = list.length;
     if (count === 0) return [];
 
-    const centerX = 500;
-    const centerY = 320;
+    const centerX = 550;
+    const centerY = 350;
 
     // Group nodes into 3 concentric functional rings based on path/type/degree
     const coreNodes: typeof list = [];
@@ -99,41 +118,44 @@ export function CodebaseVisualizer({
       }
     });
 
-    const result: ((typeof list)[0] & { x: number; y: number; ring: string })[] = [];
+    const result: ((typeof list)[0] & { x: number; y: number; ring: string; displayLabel: string })[] = [];
 
-    // Inner Core Ring (Radius 140px)
+    // Inner Core Ring (Radius 160px)
     coreNodes.forEach((node, i) => {
       const angle = (i / Math.max(coreNodes.length, 1)) * 2 * Math.PI - Math.PI / 2;
-      const radius = 140;
+      const radius = 160;
       result.push({
         ...node,
         x: centerX + radius * Math.cos(angle),
         y: centerY + radius * Math.sin(angle),
         ring: "core",
+        displayLabel: getShortPathLabel(node.path),
       });
     });
 
-    // Middle Components Ring (Radius 260px)
+    // Middle Components Ring (Radius 300px)
     componentNodes.forEach((node, i) => {
       const angle = (i / Math.max(componentNodes.length, 1)) * 2 * Math.PI - Math.PI / 4;
-      const radius = 260;
+      const radius = 300;
       result.push({
         ...node,
         x: centerX + radius * Math.cos(angle),
         y: centerY + radius * Math.sin(angle),
         ring: "component",
+        displayLabel: getShortPathLabel(node.path),
       });
     });
 
-    // Outer Pages Ring (Radius 370px)
+    // Outer Pages Ring (Radius 430px)
     pageNodes.forEach((node, i) => {
       const angle = (i / Math.max(pageNodes.length, 1)) * 2 * Math.PI;
-      const radius = 370;
+      const radius = 430;
       result.push({
         ...node,
         x: centerX + radius * Math.cos(angle),
         y: centerY + radius * Math.sin(angle),
         ring: "page",
+        displayLabel: getShortPathLabel(node.path),
       });
     });
 
@@ -219,7 +241,7 @@ export function CodebaseVisualizer({
       </div>
 
       {/* Main Graph Canvas & Inspector Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[520px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[540px]">
         {/* Left Interactive SVG Canvas */}
         <div
           ref={containerRef}
@@ -231,56 +253,72 @@ export function CodebaseVisualizer({
             isDragging ? "cursor-grabbing" : "cursor-grab"
           }`}
         >
-          {/* Canvas Search & Control Bar */}
-          <div className="flex items-center justify-between gap-3 mb-2 z-20 pointer-events-auto">
-            <div className="relative flex-1 max-w-xs">
+          {/* Canvas Search & Mode Controls Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2 z-20 pointer-events-auto">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search module by name or path..."
-                className="w-full rounded-md border border-zinc-800 bg-zinc-900/90 pl-8 pr-3 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-purple-500 focus:outline-none transition-colors"
+                className="w-full rounded-md border border-zinc-800 bg-zinc-900/90 pl-8 pr-3 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-purple-500 focus:outline-none transition-colors font-mono"
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-md p-1 font-mono text-xs text-zinc-400">
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              {/* Connected Only Filter Toggle */}
               <button
                 type="button"
-                onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 2.0))}
-                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
-                title="Zoom In"
+                onClick={() => setShowConnectedOnly(!showConnectedOnly)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs transition-colors ${
+                  showConnectedOnly
+                    ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
+                    : "bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200"
+                }`}
               >
-                <ZoomIn className="h-3.5 w-3.5" />
+                <Filter className="h-3 w-3" />
+                <span>{showConnectedOnly ? "Edges Only" : "All Files"}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.5))}
-                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
-                title="Zoom Out"
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={resetView}
-                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800 flex items-center gap-1"
-                title="Reset View"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span className="text-[10px] hidden sm:inline">Fit</span>
-              </button>
-              <span className="px-1.5 text-[11px] text-zinc-500 font-bold">
-                {(zoomLevel * 100).toFixed(0)}%
-              </span>
+
+              <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-md p-1 text-zinc-400">
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 2.2))}
+                  className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.4))}
+                  className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={resetView}
+                  className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800 flex items-center gap-1"
+                  title="Reset View"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span className="text-[10px] hidden sm:inline">Fit</span>
+                </button>
+                <span className="px-1.5 text-[11px] text-zinc-500 font-bold">
+                  {(zoomLevel * 100).toFixed(0)}%
+                </span>
+              </div>
             </div>
           </div>
 
           {/* SVG Network Canvas */}
-          <div className="flex-1 min-h-[440px] flex items-center justify-center overflow-hidden relative select-none">
+          <div className="flex-1 min-h-[460px] flex items-center justify-center overflow-hidden relative select-none">
             <svg
-              viewBox="0 0 1000 640"
-              className="w-full h-full max-h-[500px] transition-transform duration-75 ease-out"
+              viewBox="0 0 1100 700"
+              className="w-full h-full max-h-[520px] transition-transform duration-75 ease-out"
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`,
               }}
@@ -329,9 +367,9 @@ export function CodebaseVisualizer({
               </defs>
 
               {/* Concentric Layer Guide Rings */}
-              <circle cx="500" cy="320" r="140" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
-              <circle cx="500" cy="320" r="260" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
-              <circle cx="500" cy="320" r="370" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
+              <circle cx="550" cy="350" r="160" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+              <circle cx="550" cy="350" r="300" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+              <circle cx="550" cy="350" r="430" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
 
               {/* Smooth Curved Quadratic Edge Lines */}
               {edges.map((edge) => {
@@ -350,8 +388,8 @@ export function CodebaseVisualizer({
                 const dy = tgt.y - src.y;
                 const norm = Math.sqrt(dx * dx + dy * dy) || 1;
                 // Offset curve control point perpendicularly
-                const controlX = midX - (dy / norm) * 20;
-                const controlY = midY + (dx / norm) * 20;
+                const controlX = midX - (dy / norm) * 25;
+                const controlY = midY + (dx / norm) * 25;
 
                 const strokeColor = isSourceSelected
                   ? "#38bdf8"
@@ -429,7 +467,7 @@ export function CodebaseVisualizer({
                     {/* Center Core Dot */}
                     <circle r={isSelected ? 5 : 3.5} fill={nodeColor} />
 
-                    {/* Node Label Text */}
+                    {/* Node Label Text with Directory Context */}
                     <text
                       y={isSelected ? 26 : 20}
                       textAnchor="middle"
@@ -438,7 +476,7 @@ export function CodebaseVisualizer({
                       fontFamily="monospace"
                       fontWeight={isSelected ? "bold" : "normal"}
                     >
-                      {node.name}
+                      {node.displayLabel}
                     </text>
                   </g>
                 );
@@ -463,7 +501,7 @@ export function CodebaseVisualizer({
               <Move className="h-3 w-3 text-zinc-600" />
               <span>Click & Drag to pan &bull; Scroll / Zoom controls</span>
             </div>
-            <span>Showing top {layoutNodes.length} modules</span>
+            <span>Showing all {layoutNodes.length} code files</span>
           </div>
         </div>
 
