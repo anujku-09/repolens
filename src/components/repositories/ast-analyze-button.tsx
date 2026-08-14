@@ -84,25 +84,23 @@ export function AstAnalyzeButton({
             <p className="font-semibold text-zinc-100">AST Analysis Complete!</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-zinc-300 pt-1 border-t border-sky-500/20">
-            <span>
-              Analyzed Files: <strong>{summary.analyzedFiles}</strong>
-            </span>
-            <span>
-              Imports: <strong>{summary.imports}</strong>
-            </span>
-            <span>
-              Exports: <strong>{summary.exports}</strong>
-            </span>
-            <span>
-              Functions: <strong>{summary.functions}</strong>
-            </span>
-            <span>
-              Classes: <strong>{summary.classes}</strong>
-            </span>
-            <span>
-              React Components: <strong>{summary.components}</strong>
-            </span>
+          <div className="flex flex-col gap-1 text-[11px] text-zinc-300 pt-1 border-t border-sky-500/20 font-mono">
+            <div className="flex items-center justify-between">
+              <span>Analyzed Files:</span>
+              <strong className="text-sky-400">{summary.analyzedFiles}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Imports / Exports:</span>
+              <strong className="text-zinc-200">{summary.imports} / {summary.exports}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Functions / Classes:</span>
+              <strong className="text-emerald-400">{summary.functions} / {summary.classes}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>React Components:</span>
+              <strong className="text-amber-400">{summary.components}</strong>
+            </div>
           </div>
 
           {summary.unsupportedLanguages.length > 0 && (

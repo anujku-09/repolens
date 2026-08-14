@@ -84,19 +84,23 @@ export function SymbolResolutionButton({
             <p className="font-semibold text-zinc-100">Symbol Graph Resolved Successfully!</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-zinc-300 pt-1 border-t border-amber-500/20">
-            <span>
-              Defined Symbols: <strong>{summary.totalDefinedSymbols}</strong>
-            </span>
-            <span>
-              Exported: <strong>{summary.exportedSymbolsCount}</strong>
-            </span>
-            <span>
-              Reference Edges: <strong>{summary.symbolReferencesCount}</strong>
-            </span>
-            <span>
-              Unused Exports: <strong>{summary.unusedExportsCount}</strong>
-            </span>
+          <div className="flex flex-col gap-1 text-[11px] text-zinc-300 pt-1 border-t border-amber-500/20 font-mono">
+            <div className="flex items-center justify-between">
+              <span>Defined Symbols:</span>
+              <strong className="text-amber-400">{summary.totalDefinedSymbols}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Exported Symbols:</span>
+              <strong className="text-emerald-400">{summary.exportedSymbolsCount}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Reference Edges:</span>
+              <strong className="text-sky-400">{summary.symbolReferencesCount}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Unused Exports:</span>
+              <strong className="text-rose-400">{summary.unusedExportsCount}</strong>
+            </div>
           </div>
 
           {summary.unusedExportsCount > 0 && (

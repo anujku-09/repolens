@@ -117,20 +117,36 @@ export async function buildRepositoryArchitectureScore(
 
   // 5. Detect Orphan / Unreachable Code Files
   const orphanFiles: OrphanFile[] = [];
-  const isEntryPoint = (path: string) =>
-    path.endsWith("page.tsx") ||
-    path.endsWith("layout.tsx") ||
-    path.endsWith("route.ts") ||
-    path.endsWith("middleware.ts") ||
-    path.endsWith("next.config.ts") ||
-    path.endsWith("tailwind.config.ts") ||
-    path.endsWith("package.json");
+  const isExcludedFromOrphanCheck = (path: string) => {
+    const p = path.toLowerCase();
+    // Exclude static assets, config files, markdown, json, lockfiles, and Next.js entry points
+    return (
+      p.startsWith("public/") ||
+      p.endsWith(".svg") ||
+      p.endsWith(".png") ||
+      p.endsWith(".ico") ||
+      p.endsWith(".json") ||
+      p.endsWith(".md") ||
+      p.endsWith(".mjs") ||
+      p.endsWith(".css") ||
+      p.endsWith(".gitignore") ||
+      p.includes("package-lock") ||
+      p.includes("config.") ||
+      p.endsWith("page.tsx") ||
+      p.endsWith("layout.tsx") ||
+      p.endsWith("route.ts") ||
+      p.endsWith("middleware.ts") ||
+      p.endsWith("global-error.tsx") ||
+      p.endsWith("error.tsx") ||
+      p.endsWith("not-found.tsx")
+    );
+  };
 
   codeFiles.forEach((file) => {
     const node = nodeMap.get(file.path);
     if (!node) return;
 
-    if (node.inDegree === 0 && node.outDegree === 0 && !isEntryPoint(file.path)) {
+    if (node.inDegree === 0 && node.outDegree === 0 && !isExcludedFromOrphanCheck(file.path)) {
       orphanFiles.push({
         fileId: file.id,
         path: file.path,

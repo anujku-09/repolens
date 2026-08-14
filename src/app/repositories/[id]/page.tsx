@@ -221,7 +221,7 @@ export default async function RepositoryDetailsPage({
 
         {/* Pipeline Control Grid (Source, AST, Graph, Symbols & Architecture Score) */}
         {isIndexed && (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
             {/* Source Ingestion Card */}
             <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
               <div>

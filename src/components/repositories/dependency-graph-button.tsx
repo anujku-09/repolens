@@ -84,19 +84,19 @@ export function DependencyGraphButton({
             <p className="font-semibold text-zinc-100">Dependency Graph Built Successfully!</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-zinc-300 pt-1 border-t border-purple-500/20">
-            <span>
-              Internal Edges: <strong>{summary.internalDependencies}</strong>
-            </span>
-            <span>
-              External Packages: <strong>{summary.externalDependencies}</strong>
-            </span>
-            <span>
-              Unresolved: <strong>{summary.unresolvedDependencies}</strong>
-            </span>
-            <span>
-              Circular Cycles: <strong>{summary.circularDependencyCount}</strong>
-            </span>
+          <div className="flex flex-col gap-1 text-[11px] text-zinc-300 pt-1 border-t border-purple-500/20 font-mono">
+            <div className="flex items-center justify-between">
+              <span>Internal Edges:</span>
+              <strong className="text-purple-400">{summary.internalDependencies}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>External Packages:</span>
+              <strong className="text-sky-400">{summary.externalDependencies}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Unresolved / Cycles:</span>
+              <strong className="text-amber-400">{summary.unresolvedDependencies} / {summary.circularDependencyCount}</strong>
+            </div>
           </div>
 
           {summary.circularDependencyCount > 0 && (

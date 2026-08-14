@@ -62,19 +62,22 @@ export function Navbar({ user, profile }: NavbarProps) {
             <div className="flex items-center gap-3">
               {/* Profile Badge */}
               <Link href="/settings">
-                <Badge variant="mono" className="hidden sm:inline-flex items-center gap-2 py-1 px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer">
+                <Badge variant="mono" className="hidden sm:inline-flex items-center gap-2 py-1 px-3 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm">
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={avatarUrl}
                       alt={username || "User Avatar"}
-                      className="h-4 w-4 rounded-full object-cover"
+                      className="h-4 w-4 rounded-full object-cover shrink-0"
                     />
                   ) : (
-                    <UserIcon className="h-3.5 w-3.5 text-emerald-400" />
+                    <UserIcon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                   )}
-                  {username && <span className="font-mono text-xs font-semibold text-emerald-400">@{username}</span>}
-                  <span className="font-mono text-[11px] text-zinc-400 max-w-[140px] truncate">{user.email}</span>
+                  {username ? (
+                    <span className="font-mono text-xs font-semibold text-emerald-400">@{username}</span>
+                  ) : (
+                    <span className="font-mono text-xs text-zinc-300 max-w-[180px] truncate">{user.email}</span>
+                  )}
                 </Badge>
               </Link>
 
