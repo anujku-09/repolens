@@ -87,10 +87,18 @@ export function RepositoryDashboardTabs({
 
       {/* Tab Panels */}
       <div className="w-full">
-        {activeTab === "overview" && overviewContent}
-        {activeTab === "dependencies" && dependencyContent}
-        {activeTab === "symbols-advisor" && symbolsAdvisorContent}
-        {activeTab === "explorer" && explorerContent}
+        <div key="tab-panel-overview" className={activeTab === "overview" ? "block" : "hidden"}>
+          {overviewContent}
+        </div>
+        <div key="tab-panel-dependencies" className={activeTab === "dependencies" ? "block" : "hidden"}>
+          {dependencyContent}
+        </div>
+        <div key="tab-panel-symbols" className={activeTab === "symbols-advisor" ? "block" : "hidden"}>
+          {symbolsAdvisorContent}
+        </div>
+        <div key="tab-panel-explorer" className={activeTab === "explorer" ? "block" : "hidden"}>
+          {explorerContent}
+        </div>
       </div>
     </div>
   );
