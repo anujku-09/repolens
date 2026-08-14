@@ -17,6 +17,8 @@ import { AstAnalyzeButton } from "@/components/repositories/ast-analyze-button";
 import { DependencyGraphButton } from "@/components/repositories/dependency-graph-button";
 import { SymbolResolutionButton } from "@/components/repositories/symbol-resolution-button";
 import { ArchitectureScoreButton } from "@/components/repositories/architecture-score-button";
+import { SymbolIntelligenceCard } from "@/components/repositories/symbol-intelligence-card";
+import { DependencyMetricsCard } from "@/components/repositories/dependency-metrics-card";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { CodebaseVisualizer } from "@/components/shared/codebase-visualizer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,17 +32,12 @@ import {
   HardDrive,
   Code2,
   Database,
-  CheckCircle2,
   FileCode,
   Cpu,
   GitFork,
   Boxes,
   AlertTriangle,
-  Info,
-  Package,
   ShieldCheck,
-  Activity,
-  Layers,
   FileX,
 } from "lucide-react";
 
@@ -102,27 +99,6 @@ export default async function RepositoryDetailsPage({
   const totalFiles = files.filter((f) => f.type === "file").length;
   const totalDirectories = files.filter((f) => f.type === "directory").length;
   const totalCodeSize = files.reduce((acc, f) => acc + (f.size || 0), 0);
-
-  // Compute Language Breakdown
-  const languageStats: Record<string, { count: number; bytes: number }> = {};
-  files.forEach((f) => {
-    if (f.type === "file" && f.language) {
-      if (!languageStats[f.language]) {
-        languageStats[f.language] = { count: 0, bytes: 0 };
-      }
-      languageStats[f.language].count += 1;
-      languageStats[f.language].bytes += f.size || 0;
-    }
-  });
-
-  const languageList = Object.entries(languageStats)
-    .map(([lang, stat]) => ({
-      name: lang,
-      count: stat.count,
-      bytes: stat.bytes,
-      percent: totalCodeSize > 0 ? (stat.bytes / totalCodeSize) * 100 : 0,
-    }))
-    .sort((a, b) => b.bytes - a.bytes);
 
   const status = repository.status || "connected";
   const isIndexed = status === "indexed" || files.length > 0;
@@ -499,121 +475,14 @@ export default async function RepositoryDetailsPage({
           </Card>
         )}
 
-        {/* Symbol Intelligence Metrics Card (Feature 8A) */}
+        {/* Interactive Symbol Intelligence Metrics Card (Feature 8A) */}
         {isSymbolsResolved && symbolSummary && (
-          <Card className="border-amber-500/30 bg-amber-500/5 p-5 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Code2 className="h-4 w-4 text-amber-400" />
-                <h3 className="text-sm font-semibold text-zinc-100">Symbol Definition & Usage Intelligence</h3>
-              </div>
-              {symbolSummary.unusedExportsCount > 0 && (
-                <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
-                  <AlertTriangle className="h-3 w-3" />
-                  <span>{symbolSummary.unusedExportsCount} Unused Export(s)</span>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-4">
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">Defined Symbols</span>
-                <p className="text-xl font-bold text-amber-400 mt-0.5">
-                  {symbolSummary.totalDefinedSymbols}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">Exported Symbols</span>
-                <p className="text-xl font-bold text-emerald-400 mt-0.5">
-                  {symbolSummary.exportedSymbolsCount}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">Reference Edges</span>
-                <p className="text-xl font-bold text-sky-400 mt-0.5">
-                  {symbolSummary.symbolReferencesCount}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">Unused Exports</span>
-                <p className="text-xl font-bold text-rose-400 mt-0.5">
-                  {symbolSummary.unusedExportsCount}
-                </p>
-              </div>
-            </div>
-
-            {/* Top Used Symbols Breakdown */}
-            {symbolSummary.topUsedSymbols.length > 0 && (
-              <div className="pt-3 border-t border-amber-500/20">
-                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-2">
-                  Top Used Symbols Across Repository
-                </label>
-                <div className="flex flex-wrap gap-2 text-xs font-mono">
-                  {symbolSummary.topUsedSymbols.map((item) => (
-                    <div
-                      key={`${item.defining_path}:${item.symbol_name}`}
-                      className="inline-flex items-center gap-2 rounded bg-zinc-950 px-2.5 py-1 text-zinc-300 border border-zinc-800"
-                    >
-                      <span className="font-semibold text-emerald-400">{item.symbol_name}</span>
-                      <span className="text-zinc-500 text-[10px]">({item.defining_path})</span>
-                      <span className="text-amber-400 font-bold">({item.usages_count} usages)</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Card>
+          <SymbolIntelligenceCard symbolSummary={symbolSummary} />
         )}
 
-        {/* Dependency Intelligence Metrics & Cycles Card */}
+        {/* Interactive Dependency Intelligence Metrics Card (Feature 7) */}
         {isGraphBuilt && serializedGraph.summary && (
-          <Card className="border-purple-500/30 bg-purple-500/5 p-5 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <GitFork className="h-4 w-4 text-purple-400" />
-                <h3 className="text-sm font-semibold text-zinc-100">Dependency Intelligence Metrics</h3>
-              </div>
-              {serializedGraph.summary.circularDependencyCount > 0 && (
-                <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
-                  <AlertTriangle className="h-3 w-3" />
-                  <span>{serializedGraph.summary.circularDependencyCount} Circular Reference Cycle(s)</span>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-4">
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">Internal Dependencies</span>
-                <p className="text-xl font-bold text-purple-400 mt-0.5">
-                  {serializedGraph.summary.internalDependencies}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">External Packages</span>
-                <p className="text-xl font-bold text-sky-400 mt-0.5">
-                  {serializedGraph.summary.externalDependencies}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">Unresolved Imports</span>
-                <p className="text-xl font-bold text-amber-400 mt-0.5">
-                  {serializedGraph.summary.unresolvedDependencies}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
-                <span className="text-[11px] text-zinc-500 uppercase">Circular Cycles</span>
-                <p className="text-xl font-bold text-rose-400 mt-0.5">
-                  {serializedGraph.summary.circularDependencyCount}
-                </p>
-              </div>
-            </div>
-          </Card>
+          <DependencyMetricsCard summary={serializedGraph.summary} />
         )}
 
         {/* Codebase Dependency Network Visualizer */}
