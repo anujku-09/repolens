@@ -19,7 +19,8 @@ import {
   Info,
   Move,
   Filter,
-  Eye,
+  Columns,
+  Circle,
 } from "lucide-react";
 
 interface CodebaseVisualizerProps {
@@ -27,6 +28,8 @@ interface CodebaseVisualizerProps {
   repositoryFullName?: string;
   defaultBranch?: string;
 }
+
+export type LayoutMode = "concentric" | "columns";
 
 /**
  * Computes a clean short path label for SVG node rendering that includes parent directory context
@@ -52,6 +55,7 @@ export function CodebaseVisualizer({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [showConnectedOnly, setShowConnectedOnly] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("concentric");
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,16 +97,63 @@ export function CodebaseVisualizer({
     return set;
   }, [selectedNode]);
 
-  // Calculate multi-ring concentric layout coordinates for ALL filtered nodes
+  // Calculate layout coordinates for ALL filtered nodes (Concentric or Columns mode)
   const layoutNodes = useMemo(() => {
-    const list = filteredNodes; // Render ALL matching nodes
+    const list = filteredNodes;
     const count = list.length;
     if (count === 0) return [];
 
-    const centerX = 550;
-    const centerY = 350;
+    const result: ((typeof list)[0] & { x: number; y: number; ring: string; displayLabel: string })[] = [];
 
-    // Group nodes into 3 concentric functional rings based on path/type/degree
+    if (layoutMode === "columns") {
+      // Columns Layout: App Pages (Col 1) -> Components (Col 2) -> Lib/Types (Col 3)
+      const pageNodes = list.filter((n) => !n.path.includes("/components/") && !n.path.includes("/lib/") && !n.path.includes("/types/"));
+      const componentNodes = list.filter((n) => n.path.includes("/components/"));
+      const coreNodes = list.filter((n) => n.path.includes("/lib/") || n.path.includes("/types/"));
+
+      const col1X = 160;
+      const col2X = 580;
+      const col3X = 1000;
+      const startY = 100;
+      const spacingY = 55;
+
+      pageNodes.forEach((node, i) => {
+        result.push({
+          ...node,
+          x: col1X,
+          y: startY + i * spacingY,
+          ring: "page",
+          displayLabel: getShortPathLabel(node.path),
+        });
+      });
+
+      componentNodes.forEach((node, i) => {
+        result.push({
+          ...node,
+          x: col2X,
+          y: startY + i * spacingY,
+          ring: "component",
+          displayLabel: getShortPathLabel(node.path),
+        });
+      });
+
+      coreNodes.forEach((node, i) => {
+        result.push({
+          ...node,
+          x: col3X,
+          y: startY + i * spacingY,
+          ring: "core",
+          displayLabel: getShortPathLabel(node.path),
+        });
+      });
+
+      return result;
+    }
+
+    // Concentric Ring Layout
+    const centerX = 650;
+    const centerY = 450;
+
     const coreNodes: typeof list = [];
     const componentNodes: typeof list = [];
     const pageNodes: typeof list = [];
@@ -117,8 +168,6 @@ export function CodebaseVisualizer({
         pageNodes.push(node);
       }
     });
-
-    const result: ((typeof list)[0] & { x: number; y: number; ring: string; displayLabel: string })[] = [];
 
     // Inner Core Ring (Radius 160px)
     coreNodes.forEach((node, i) => {
@@ -146,10 +195,10 @@ export function CodebaseVisualizer({
       });
     });
 
-    // Outer Pages Ring (Radius 430px)
+    // Outer Pages Ring (Radius 420px)
     pageNodes.forEach((node, i) => {
       const angle = (i / Math.max(pageNodes.length, 1)) * 2 * Math.PI;
-      const radius = 430;
+      const radius = 420;
       result.push({
         ...node,
         x: centerX + radius * Math.cos(angle),
@@ -160,12 +209,38 @@ export function CodebaseVisualizer({
     });
 
     return result;
-  }, [filteredNodes]);
+  }, [filteredNodes, layoutMode]);
 
   const layoutMap = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
     layoutNodes.forEach((n) => map.set(n.path, { x: n.x, y: n.y }));
     return map;
+  }, [layoutNodes]);
+
+  // Compute Dynamic ViewBox bounds so NO node is ever clipped outside SVG screen
+  const viewBoxString = useMemo(() => {
+    if (layoutNodes.length === 0) return "0 0 1200 800";
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    layoutNodes.forEach((n) => {
+      minX = Math.min(minX, n.x);
+      minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x);
+      maxY = Math.max(maxY, n.y);
+    });
+
+    // Add margin around extreme nodes
+    const margin = 100;
+    const x = Math.floor(minX - margin);
+    const y = Math.floor(minY - margin);
+    const w = Math.ceil(maxX - minX + margin * 2);
+    const h = Math.ceil(maxY - minY + margin * 2);
+
+    return `${x} ${y} ${Math.max(w, 800)} ${Math.max(h, 600)}`;
   }, [layoutNodes]);
 
   // Mouse Drag / Pan Handlers
@@ -255,7 +330,7 @@ export function CodebaseVisualizer({
         >
           {/* Canvas Search & Mode Controls Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2 z-20 pointer-events-auto">
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
               <input
                 type="text"
@@ -267,11 +342,41 @@ export function CodebaseVisualizer({
             </div>
 
             <div className="flex items-center gap-1.5 font-mono text-xs">
+              {/* Layout Mode Selector (Concentric vs Columns) */}
+              <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-md p-0.5 text-zinc-400">
+                <button
+                  type="button"
+                  onClick={() => setLayoutMode("concentric")}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    layoutMode === "concentric"
+                      ? "bg-purple-500/20 text-purple-300 font-semibold"
+                      : "hover:text-zinc-200"
+                  }`}
+                  title="Concentric Network Layout"
+                >
+                  <Circle className="h-3 w-3" />
+                  <span>Rings</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLayoutMode("columns")}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    layoutMode === "columns"
+                      ? "bg-purple-500/20 text-purple-300 font-semibold"
+                      : "hover:text-zinc-200"
+                  }`}
+                  title="Architectural Columns Layout"
+                >
+                  <Columns className="h-3 w-3" />
+                  <span>Columns</span>
+                </button>
+              </div>
+
               {/* Connected Only Filter Toggle */}
               <button
                 type="button"
                 onClick={() => setShowConnectedOnly(!showConnectedOnly)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs transition-colors ${
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs transition-colors ${
                   showConnectedOnly
                     ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
                     : "bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200"
@@ -281,10 +386,11 @@ export function CodebaseVisualizer({
                 <span>{showConnectedOnly ? "Edges Only" : "All Files"}</span>
               </button>
 
+              {/* Zoom & Pan Controls */}
               <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-md p-1 text-zinc-400">
                 <button
                   type="button"
-                  onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 2.2))}
+                  onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 2.5))}
                   className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
                   title="Zoom In"
                 >
@@ -292,7 +398,7 @@ export function CodebaseVisualizer({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.4))}
+                  onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.3))}
                   className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
                   title="Zoom Out"
                 >
@@ -302,7 +408,7 @@ export function CodebaseVisualizer({
                   type="button"
                   onClick={resetView}
                   className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800 flex items-center gap-1"
-                  title="Reset View"
+                  title="Reset View & Auto Fit"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   <span className="text-[10px] hidden sm:inline">Fit</span>
@@ -314,10 +420,10 @@ export function CodebaseVisualizer({
             </div>
           </div>
 
-          {/* SVG Network Canvas */}
+          {/* Dynamic Responsive SVG Canvas */}
           <div className="flex-1 min-h-[460px] flex items-center justify-center overflow-hidden relative select-none">
             <svg
-              viewBox="0 0 1100 700"
+              viewBox={viewBoxString}
               className="w-full h-full max-h-[520px] transition-transform duration-75 ease-out"
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`,
@@ -366,15 +472,20 @@ export function CodebaseVisualizer({
                 </filter>
               </defs>
 
-              {/* Concentric Layer Guide Rings */}
-              <circle cx="550" cy="350" r="160" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
-              <circle cx="550" cy="350" r="300" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
-              <circle cx="550" cy="350" r="430" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
+              {/* Concentric Layer Guide Rings (Rendered only in concentric mode) */}
+              {layoutMode === "concentric" && (
+                <>
+                  <circle cx="650" cy="450" r="160" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
+                  <circle cx="650" cy="450" r="300" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
+                  <circle cx="650" cy="450" r="420" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.25" />
+                </>
+              )}
 
-              {/* Smooth Curved Quadratic Edge Lines */}
+              {/* Smooth Curved Edge Lines */}
               {edges.map((edge) => {
                 const src = layoutMap.get(edge.source);
                 const tgt = layoutMap.get(edge.target);
+                // GUARANTEE: Only draw line if BOTH source and target nodes exist in layoutMap!
                 if (!src || !tgt) return null;
 
                 const isSourceSelected = selectedNode && edge.source === selectedNode.path;
@@ -387,9 +498,8 @@ export function CodebaseVisualizer({
                 const dx = tgt.x - src.x;
                 const dy = tgt.y - src.y;
                 const norm = Math.sqrt(dx * dx + dy * dy) || 1;
-                // Offset curve control point perpendicularly
-                const controlX = midX - (dy / norm) * 25;
-                const controlY = midY + (dx / norm) * 25;
+                const controlX = midX - (dy / norm) * 20;
+                const controlY = midY + (dx / norm) * 20;
 
                 const strokeColor = isSourceSelected
                   ? "#38bdf8"
