@@ -276,8 +276,18 @@ export default async function RepositoryDetailsPage({
           symbolsAdvisorContent={
             <>
               {/* Symbol Definition & Usage Intelligence Card */}
-              {isSymbolsResolved && symbolSummary && (
+              {isSymbolsResolved && symbolSummary ? (
                 <SymbolIntelligenceCard symbolSummary={symbolSummary} />
+              ) : (
+                <Card className="border-amber-500/30 bg-amber-500/5 p-5 mb-8 text-center font-mono">
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <Code2 className="h-8 w-8 text-amber-400 mb-2" />
+                    <h3 className="text-sm font-semibold text-zinc-200">Symbol Intelligence Mapping Pending</h3>
+                    <p className="text-xs text-zinc-400 max-w-md mt-1">
+                      Click &quot;Re-resolve Symbols&quot; in step 4 of the Pipeline Control bar on the Overview tab to map definitions, exported symbols, reference edges, and unused exports across your repository.
+                    </p>
+                  </div>
+                </Card>
               )}
 
               {/* Architecture & Refactoring Advisor */}
