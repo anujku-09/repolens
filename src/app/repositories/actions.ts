@@ -6,19 +6,17 @@ import { ingestRepositoryTree } from "@/lib/repositories/files";
 import { ingestRepositorySource } from "@/lib/ingestion/source";
 import { analyzeRepository } from "@/lib/analysis/analyze-repository";
 import { buildRepositoryDependencyGraph } from "@/lib/analysis/dependency/build-graph";
+import { buildRepositorySymbols } from "@/lib/analysis/symbols/build-symbols";
 import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
  * Server Action: Connect a GitHub Repository to RepoLens.
- * Persists the GitHub repository metadata into the public.repositories table.
- * Derived user_id is enforced on the server.
  */
 export async function connectGitHubRepositoryAction(githubRepo: GitHubRepo) {
   if (!githubRepo || !githubRepo.id || !githubRepo.full_name) {
     return { error: "Invalid repository payload." };
   }
 
-  // Check if repository is already connected for this user
   const userRepos = await getRepositories();
   const existingRepo = userRepos.find(
     (r) => r.github_repo_id === githubRepo.id || r.full_name === githubRepo.full_name
@@ -118,6 +116,23 @@ export async function buildDependencyGraphAction(repositoryId: string) {
   }
 
   const result = await buildRepositoryDependencyGraph(repositoryId);
+
+  revalidatePath("/repositories");
+  revalidatePath(`/repositories/${repositoryId}`);
+  revalidatePath("/dashboard");
+
+  return result;
+}
+
+/**
+ * Server Action: Resolve Symbol Definitions & Cross-File Usages (Feature 8A).
+ */
+export async function buildRepositorySymbolsAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+
+  const result = await buildRepositorySymbols(repositoryId);
 
   revalidatePath("/repositories");
   revalidatePath(`/repositories/${repositoryId}`);

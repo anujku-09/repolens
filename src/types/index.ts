@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion, Source Code Ingestion, AST Analysis & Dependency Graph.
+ * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion, Source Code Ingestion, AST Analysis, Dependency Graph & Symbol Resolution (Feature 8A).
  */
 
 export interface Profile {
@@ -259,7 +259,7 @@ export interface RepositoryAnalysisSummary {
 }
 
 /**
- * Dependency Graph & Import Resolution Domain Types (Feature 7)
+ * Dependency Graph Domain Types (Feature 7)
  */
 export type DependencyType = "internal" | "external" | "unresolved";
 
@@ -303,14 +303,14 @@ export interface GraphNode {
   size: number | null;
   inDegree: number;
   outDegree: number;
-  imports: string[];   // paths of files this node imports
-  importedBy: string[];// paths of files that import this node
+  imports: string[];
+  importedBy: string[];
 }
 
 export interface GraphEdge {
   id: string;
-  source: string; // source file id or path
-  target: string; // target file id or path
+  source: string;
+  target: string;
   importPath: string;
 }
 
@@ -318,4 +318,74 @@ export interface SerializedGraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
   summary: DependencyGraphSummary | null;
+}
+
+/**
+ * Symbol-Level Resolution & Definition-to-Usage Domain Types (Feature 8A)
+ */
+export type SymbolKind = "function" | "class" | "component" | "variable" | "type" | "export";
+export type ReferenceType = "import" | "call" | "type_reference";
+
+export interface RepositorySymbol {
+  id: string;
+  repository_id: string;
+  user_id: string;
+  defining_file_id: string;
+  symbol_name: string;
+  symbol_kind: SymbolKind;
+  is_exported: boolean;
+  is_default_export: boolean;
+  start_line: number | null;
+  end_line: number | null;
+  created_at: string;
+}
+
+export interface RepositorySymbolInsert {
+  repository_id: string;
+  user_id: string;
+  defining_file_id: string;
+  symbol_name: string;
+  symbol_kind: SymbolKind;
+  is_exported: boolean;
+  is_default_export: boolean;
+  start_line?: number | null;
+  end_line?: number | null;
+}
+
+export interface RepositorySymbolReference {
+  id: string;
+  repository_id: string;
+  user_id: string;
+  symbol_id: string;
+  referencing_file_id: string;
+  reference_type: ReferenceType;
+  import_alias: string | null;
+  created_at: string;
+}
+
+export interface RepositorySymbolReferenceInsert {
+  repository_id: string;
+  user_id: string;
+  symbol_id: string;
+  referencing_file_id: string;
+  reference_type: ReferenceType;
+  import_alias?: string | null;
+}
+
+export interface SymbolGraphSummary {
+  totalDefinedSymbols: number;
+  exportedSymbolsCount: number;
+  symbolReferencesCount: number;
+  unusedExportsCount: number;
+  topUsedSymbols: { symbol_name: string; defining_path: string; usages_count: number }[];
+  unusedExports: { symbol_name: string; defining_path: string; kind: SymbolKind }[];
+}
+
+export interface SymbolWithReferences extends RepositorySymbol {
+  defining_path: string;
+  references: {
+    referencing_file_id: string;
+    referencing_path: string;
+    reference_type: ReferenceType;
+  }[];
 }

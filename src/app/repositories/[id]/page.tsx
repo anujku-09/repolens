@@ -7,12 +7,14 @@ import { getRepositoryFiles } from "@/lib/repositories/files";
 import { getRepositoryFileContentsSummary } from "@/lib/ingestion/source";
 import { getRepositoryAnalysisMap } from "@/lib/analysis/analyze-repository";
 import { getSerializedDependencyGraph } from "@/lib/analysis/dependency/build-graph";
+import { getRepositorySymbolSummary } from "@/lib/analysis/symbols/build-symbols";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { IngestButton } from "@/components/repositories/ingest-button";
 import { SourceIngestButton } from "@/components/repositories/source-ingest-button";
 import { AstAnalyzeButton } from "@/components/repositories/ast-analyze-button";
 import { DependencyGraphButton } from "@/components/repositories/dependency-graph-button";
+import { SymbolResolutionButton } from "@/components/repositories/symbol-resolution-button";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { CodebaseVisualizer } from "@/components/shared/codebase-visualizer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,6 +36,7 @@ import {
   AlertTriangle,
   Info,
   Package,
+  Layers,
 } from "lucide-react";
 
 function formatBytes(bytes: number): string {
@@ -84,6 +87,9 @@ export default async function RepositoryDetailsPage({
   // Fetch real dependency graph & import resolution data from public.repository_dependencies
   const serializedGraph = await getSerializedDependencyGraph(repoId);
 
+  // Fetch real symbol resolution summary from public.repository_symbols (Feature 8A)
+  const { summary: symbolSummary } = await getRepositorySymbolSummary(repoId);
+
   // Compute stats dynamically from stored repository_files
   const totalFiles = files.filter((f) => f.type === "file").length;
   const totalDirectories = files.filter((f) => f.type === "directory").length;
@@ -117,6 +123,9 @@ export default async function RepositoryDetailsPage({
   const isAstAnalyzed = Boolean(astSummary && astSummary.analyzedFiles > 0);
   const isGraphBuilt = Boolean(
     serializedGraph.summary && serializedGraph.summary.internalDependencies > 0
+  );
+  const isSymbolsResolved = Boolean(
+    symbolSummary && symbolSummary.totalDefinedSymbols > 0
   );
 
   return (
@@ -179,6 +188,13 @@ export default async function RepositoryDetailsPage({
                   <span>Graph Resolved</span>
                 </Badge>
               )}
+
+              {isSymbolsResolved && (
+                <Badge variant="emerald" className="font-mono text-xs gap-1">
+                  <Code2 className="h-3 w-3 text-amber-400" />
+                  <span>Symbols Mapped</span>
+                </Badge>
+              )}
             </div>
 
             {repository.description && (
@@ -228,9 +244,9 @@ export default async function RepositoryDetailsPage({
           </Card>
         )}
 
-        {/* Pipeline Control Grid (Source Ingestion, AST Analysis & Dependency Graph) */}
+        {/* Pipeline Control Grid (Source Ingestion, AST Analysis, Dependency Graph & Symbol Resolution) */}
         {isIndexed && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Source Ingestion Card */}
             <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
               <div>
@@ -282,7 +298,7 @@ export default async function RepositoryDetailsPage({
                   )}
                 </div>
                 <p className="text-xs text-zinc-400 mt-2">
-                  Extract imports, exports, functions, classes, and React components via TypeScript Compiler AST.
+                  Extract imports, exports, functions, classes, and React components via TS Compiler AST.
                 </p>
               </div>
 
@@ -314,7 +330,7 @@ export default async function RepositoryDetailsPage({
                   )}
                 </div>
                 <p className="text-xs text-zinc-400 mt-2">
-                  Resolve internal import paths, detect circular dependencies, and build repository dependency graph.
+                  Resolve internal import paths, detect circular dependencies, and build dependency graph.
                 </p>
               </div>
 
@@ -326,7 +342,130 @@ export default async function RepositoryDetailsPage({
                 />
               </div>
             </Card>
+
+            {/* Symbol Resolution Card (Feature 8A) */}
+            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Code2 className="h-4 w-4 text-amber-400" />
+                    <h3 className="text-sm font-semibold text-zinc-100">4. Symbol Mapping</h3>
+                  </div>
+                  {isSymbolsResolved ? (
+                    <Badge variant="emerald" className="font-mono text-[10px]">
+                      Mapped ({symbolSummary?.totalDefinedSymbols} symbols)
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
+                      Pending Graph
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-400 mt-2">
+                  Connect functions, classes & components to cross-file usages. Detect unused exports.
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-zinc-800/80">
+                <SymbolResolutionButton
+                  repositoryId={repository.id}
+                  isSymbolsResolved={isSymbolsResolved}
+                  disabled={!isGraphBuilt}
+                />
+              </div>
+            </Card>
           </div>
+        )}
+
+        {/* Symbol Intelligence Metrics Card (Feature 8A) */}
+        {isSymbolsResolved && symbolSummary && (
+          <Card className="border-amber-500/30 bg-amber-500/5 p-5 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Code2 className="h-4 w-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-zinc-100">Symbol Definition & Usage Intelligence</h3>
+              </div>
+              {symbolSummary.unusedExportsCount > 0 && (
+                <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>{symbolSummary.unusedExportsCount} Unused Export(s)</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-4">
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Defined Symbols</span>
+                <p className="text-xl font-bold text-amber-400 mt-0.5">
+                  {symbolSummary.totalDefinedSymbols}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Exported Symbols</span>
+                <p className="text-xl font-bold text-emerald-400 mt-0.5">
+                  {symbolSummary.exportedSymbolsCount}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Reference Edges</span>
+                <p className="text-xl font-bold text-sky-400 mt-0.5">
+                  {symbolSummary.symbolReferencesCount}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Unused Exports</span>
+                <p className="text-xl font-bold text-rose-400 mt-0.5">
+                  {symbolSummary.unusedExportsCount}
+                </p>
+              </div>
+            </div>
+
+            {/* Top Used Symbols Breakdown */}
+            {symbolSummary.topUsedSymbols.length > 0 && (
+              <div className="pt-3 border-t border-amber-500/20">
+                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-2">
+                  Top Used Symbols Across Repository
+                </label>
+                <div className="flex flex-wrap gap-2 text-xs font-mono">
+                  {symbolSummary.topUsedSymbols.map((item) => (
+                    <div
+                      key={`${item.defining_path}:${item.symbol_name}`}
+                      className="inline-flex items-center gap-2 rounded bg-zinc-950 px-2.5 py-1 text-zinc-300 border border-zinc-800"
+                    >
+                      <span className="font-semibold text-emerald-400">{item.symbol_name}</span>
+                      <span className="text-zinc-500 text-[10px]">({item.defining_path})</span>
+                      <span className="text-amber-400 font-bold">({item.usages_count} usages)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Unused Exports List */}
+            {symbolSummary.unusedExports.length > 0 && (
+              <div className="pt-3 mt-3 border-t border-amber-500/20">
+                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Unused Exports (Exported but Never Imported Elsewhere)</span>
+                </label>
+                <div className="flex flex-wrap gap-2 text-xs font-mono">
+                  {symbolSummary.unusedExports.slice(0, 10).map((exp) => (
+                    <div
+                      key={`${exp.defining_path}:${exp.symbol_name}`}
+                      className="inline-flex items-center gap-1.5 rounded bg-zinc-950 px-2.5 py-1 text-rose-300 border border-zinc-800"
+                    >
+                      <span className="font-semibold">{exp.symbol_name}</span>
+                      <span className="text-[10px] text-zinc-500">({exp.kind})</span>
+                      <span className="text-[10px] text-zinc-600">in {exp.defining_path}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
         )}
 
         {/* Dependency Intelligence Metrics & Cycles Card */}
@@ -418,7 +557,7 @@ export default async function RepositoryDetailsPage({
           </Card>
         )}
 
-        {/* Codebase Dependency Network Visualizer (Feature 7) */}
+        {/* Codebase Dependency Network Visualizer (Feature 7 & 8) */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
