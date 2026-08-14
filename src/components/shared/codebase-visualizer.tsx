@@ -563,10 +563,8 @@ export function CodebaseVisualizer({
                 const dx = tgt.x - src.x;
                 const dy = tgt.y - src.y;
                 const norm = Math.sqrt(dx * dx + dy * dy) || 1;
-                const controlX = midX - (dy / norm) * 20;
-                const controlY = midY + (dx / norm) * 20;
-                const controlXFormatted = Number(controlX.toFixed(2));
-                const controlYFormatted = Number(controlY.toFixed(2));
+                const ctrlX = Number((midX - (dy / norm) * 20).toFixed(2));
+                const ctrlY = Number((midY + (dx / norm) * 20).toFixed(2));
 
                 const strokeColor = isSourceSelected
                   ? "#38bdf8"
@@ -583,7 +581,7 @@ export function CodebaseVisualizer({
                 return (
                   <path
                     key={edge.id}
-                    d={`M ${src.x.toFixed(2)} ${src.y.toFixed(2)} Q ${controlXFormatted} ${controlYFormatted} ${tgt.x.toFixed(2)} ${tgt.y.toFixed(2)}`}
+                    d={`M ${src.x.toFixed(2)} ${src.y.toFixed(2)} Q ${ctrlX} ${ctrlY} ${tgt.x.toFixed(2)} ${tgt.y.toFixed(2)}`}
                     fill="none"
                     stroke={strokeColor}
                     strokeWidth={isConnectedToSelected ? 2.5 : 1}
