@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { connectGitHubRepositoryAction } from "@/app/repositories/actions";
+import { connectGitHubRepositoryAction, disconnectRepositoryAction } from "@/app/repositories/actions";
 import { Repository, GitHubRepo } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
   Lock,
   Globe,
   GitBranch,
+  Unlink,
 } from "lucide-react";
 import { GithubIcon } from "@/components/ui/icons";
 
@@ -45,6 +46,7 @@ export function RepositoryDiscoveryView({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "connected" | "unconnected">("all");
   const [connectingId, setConnectingId] = useState<number | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Map connected repos by github_repo_id or full_name for quick lookup
@@ -80,6 +82,22 @@ export function RepositoryDiscoveryView({
     startTransition(async () => {
       const result = await connectGitHubRepositoryAction(repo);
       setConnectingId(null);
+
+      if (result.error) {
+        setActionError(result.error);
+      } else {
+        router.refresh();
+      }
+    });
+  };
+
+  const handleDisconnect = async (repoId: string) => {
+    setDisconnectingId(repoId);
+    setActionError(null);
+
+    startTransition(async () => {
+      const result = await disconnectRepositoryAction(repoId);
+      setDisconnectingId(null);
 
       if (result.error) {
         setActionError(result.error);
@@ -283,18 +301,42 @@ export function RepositoryDiscoveryView({
                   {/* Connection Button / Status */}
                   <div className="pt-1">
                     {isConnected ? (
-                      <div className="flex items-center justify-between">
-                        <Badge variant="emerald" className="gap-1 py-1 text-xs">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          <span>Connected</span>
-                        </Badge>
-                        <Link
-                          href={`/repositories/${dbRepo?.id}`}
-                          className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline font-medium font-mono"
-                        >
-                          <span>View Details</span>
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </Link>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="emerald" className="gap-1 py-1 text-xs font-mono">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Connected</span>
+                          </Badge>
+                          <Link
+                            href={`/repositories/${dbRepo?.id}`}
+                            className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline font-medium font-mono"
+                          >
+                            <span>View Details</span>
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
+
+                        {dbRepo && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDisconnect(dbRepo.id)}
+                            disabled={disconnectingId === dbRepo.id || isPending}
+                            className="w-full gap-1.5 text-xs border-zinc-800 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 font-mono h-8 cursor-pointer"
+                          >
+                            {disconnectingId === dbRepo.id ? (
+                              <>
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                <span>Disconnecting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Unlink className="h-3 w-3" />
+                                <span>Disconnect Repository</span>
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <Button

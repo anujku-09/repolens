@@ -244,3 +244,23 @@ export async function generateRefactoringReportAction(repositoryId: string) {
   }
   return await generateRefactoringReport(repositoryId);
 }
+
+/**
+ * Server Action: Disconnect & Remove a Repository from RepoLens.
+ */
+export async function disconnectRepositoryAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+
+  const { error } = await deleteRepository(repositoryId);
+
+  if (error) {
+    return { success: false, error };
+  }
+
+  revalidatePath("/repositories");
+  revalidatePath("/dashboard");
+
+  return { success: true, error: null };
+}
