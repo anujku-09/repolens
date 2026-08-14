@@ -422,8 +422,8 @@ export default async function RepositoryDetailsPage({
                 </Card>
               </div>
 
-              {/* Architecture Health Dashboard Card (Feature 8B) */}
-              {isScoreComputed && archScore && (
+              {/* Architecture Health Dashboard Card */}
+              {isScoreComputed && archScore ? (
                 <Card className="border-emerald-500/30 bg-emerald-500/5 p-5 mb-8">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-emerald-500/20 pb-4">
                     <div className="flex items-center gap-3">
@@ -534,6 +534,16 @@ export default async function RepositoryDetailsPage({
                       </div>
                     </div>
                   )}
+                </Card>
+              ) : (
+                <Card className="border-zinc-800/80 bg-zinc-900/30 p-5 mb-8 text-center font-mono">
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <ShieldCheck className="h-8 w-8 text-zinc-600 mb-2" />
+                    <h3 className="text-sm font-semibold text-zinc-300">Architecture Score Pending</h3>
+                    <p className="text-xs text-zinc-500 max-w-md mt-1">
+                      Click &quot;Re-calculate Score&quot; in card 5 of the Pipeline Control grid above to calculate coupling, cohesion, modularity, and layer violations.
+                    </p>
+                  </div>
                 </Card>
               )}
 
