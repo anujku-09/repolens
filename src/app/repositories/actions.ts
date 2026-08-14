@@ -12,6 +12,7 @@ import { analyzeFileImpact } from "@/lib/analysis/impact/analyze-impact";
 import { searchCodebase } from "@/lib/search/codebase-search";
 import { generateAICodebasePromptContext } from "@/lib/ai/codebase-intelligence";
 import { generateRepositoryOnboardingTour } from "@/lib/onboarding/generate-tour";
+import { generateRefactoringReport } from "@/lib/advisor/generate-recommendations";
 import { GitHubRepo, CreateRepositoryInput, CodebaseSearchFilters } from "@/types";
 
 /**
@@ -232,4 +233,14 @@ export async function generateOnboardingTourAction(repositoryId: string) {
     return { success: false, error: "Missing repository ID." };
   }
   return await generateRepositoryOnboardingTour(repositoryId);
+}
+
+/**
+ * Server Action: Generate Architecture & Refactoring Recommendations (Feature 13).
+ */
+export async function generateRefactoringReportAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+  return await generateRefactoringReport(repositoryId);
 }

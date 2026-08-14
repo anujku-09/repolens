@@ -597,3 +597,35 @@ export interface RepositoryOnboardingTour {
   healthScore: number | null;
   steps: OnboardingTourStep[];
 }
+
+/**
+ * Feature 13: Architecture & Refactoring Advisor Domain Types
+ */
+export type RecommendationPriority = "critical" | "high" | "medium" | "low";
+export type RecommendationCategory =
+  | "circular_dependency"
+  | "layer_violation"
+  | "high_instability"
+  | "unused_export_pruning"
+  | "orphan_file_cleanup";
+
+export interface RefactoringRecommendation {
+  id: string;
+  priority: RecommendationPriority;
+  category: RecommendationCategory;
+  title: string;
+  affectedPath: string;
+  affectedFileId?: string;
+  evidence: string;
+  potentialImpact: string;
+  suggestedRefactor: string;
+  aiExplanation: string;
+}
+
+export interface RefactoringAdvisorReport {
+  repositoryId: string;
+  repositoryName: string;
+  healthScore: number | null;
+  totalIssuesFound: number;
+  recommendations: RefactoringRecommendation[];
+}
