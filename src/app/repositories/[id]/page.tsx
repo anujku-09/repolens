@@ -390,6 +390,27 @@ export default async function RepositoryDetailsPage({
                 </div>
               </div>
             )}
+
+            {/* External Package Dependencies Breakdown */}
+            {serializedGraph.summary.externalPackages.length > 0 && (
+              <div className="pt-3 mt-3 border-t border-purple-500/20">
+                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                  <Package className="h-3.5 w-3.5 text-sky-400" />
+                  <span>External Package Dependencies ({serializedGraph.summary.externalPackages.length})</span>
+                </label>
+                <div className="flex flex-wrap gap-2 text-xs font-mono">
+                  {serializedGraph.summary.externalPackages.slice(0, 10).map((pkg) => (
+                    <div
+                      key={pkg.name}
+                      className="inline-flex items-center gap-2 rounded bg-zinc-950 px-2 py-1 text-sky-300 border border-zinc-800"
+                    >
+                      <span className="font-semibold">{pkg.name}</span>
+                      <span className="text-zinc-500">({pkg.count})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
         )}
 

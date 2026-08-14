@@ -218,6 +218,7 @@ export async function buildRepositoryDependencyGraph(
 
 /**
  * Fetches and serializes real graph nodes, edges, and statistics for UI visualizers.
+ * Computes external packages and unresolved imports dynamically from AST file analysis.
  */
 export async function getSerializedDependencyGraph(
   repositoryId: string
@@ -234,6 +235,11 @@ export async function getSerializedDependencyGraph(
   const files = await getRepositoryFiles(repositoryId);
   const codeFiles = files.filter((f) => f.type === "file");
   const fileMap = new Map<string, RepositoryFile>(codeFiles.map((f) => [f.id, f]));
+  const normalizedFileMap = new Map<string, RepositoryFile>();
+
+  codeFiles.forEach((f) => {
+    normalizedFileMap.set(normalizePath(f.path), f);
+  });
 
   // Fetch internal dependencies
   const { data: depsData, error } = await supabase
@@ -278,6 +284,32 @@ export async function getSerializedDependencyGraph(
     }
   });
 
+  // Calculate external packages & unresolved imports dynamically from AST analysis
+  const { analysisMap } = await getRepositoryAnalysisMap(repositoryId);
+  const externalPackageCounts = new Map<string, number>();
+  let externalDependenciesCount = 0;
+  let unresolvedDependenciesCount = 0;
+
+  analysisMap.forEach((fileAnalysis, sourceFileId) => {
+    const sourceFile = fileMap.get(sourceFileId);
+    if (!sourceFile || fileAnalysis.status !== "analyzed") return;
+
+    const importsList = fileAnalysis.analysis?.imports || [];
+    importsList.forEach((imp) => {
+      if (!imp.source) return;
+      const res = resolveImportPath(sourceFile.path, imp.source, normalizedFileMap);
+      if (res.type === "external") {
+        externalDependenciesCount++;
+        externalPackageCounts.set(
+          res.packageName,
+          (externalPackageCounts.get(res.packageName) || 0) + 1
+        );
+      } else if (res.type === "unresolved") {
+        unresolvedDependenciesCount++;
+      }
+    });
+  });
+
   // Filter nodes to files that either have edges or are analyzable code files
   const activeFileIds = new Set<string>();
   depsData.forEach((d) => {
@@ -319,15 +351,19 @@ export async function getSerializedDependencyGraph(
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
+  const externalPackages = Array.from(externalPackageCounts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
   const summary: DependencyGraphSummary = {
     filesProcessed: codeFiles.length,
     internalDependencies: edges.length,
-    externalDependencies: 0,
-    unresolvedDependencies: 0,
+    externalDependencies: externalDependenciesCount,
+    unresolvedDependencies: unresolvedDependenciesCount,
     circularDependencyCount: circularCycles.length,
     mostImportedFiles,
     mostDependentFiles,
-    externalPackages: [],
+    externalPackages,
     circularCycles,
   };
 
