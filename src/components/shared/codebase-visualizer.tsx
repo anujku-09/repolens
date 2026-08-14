@@ -381,7 +381,7 @@ export function CodebaseVisualizer({
       </div>
 
       {/* Main Graph Canvas & Inspector Layout */}
-      <div className={`grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-hidden ${isFullscreen ? "h-[calc(100vh-57px)]" : "min-h-135"}`}>
+      <div className={`grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-hidden ${isFullscreen ? "h-[calc(100vh-57px)]" : "h-[560px] sm:h-[640px] lg:h-[740px] xl:h-[780px]"}`}>
         {/* Left Interactive SVG Canvas */}
         <div
           ref={containerRef}
@@ -672,7 +672,7 @@ export function CodebaseVisualizer({
                       y={isTargetNode ? 28 : isSelected ? 26 : 20}
                       textAnchor="middle"
                       fill={isTargetNode ? "#ffe4e6" : isSelected ? "#f4f4f5" : isAffectedByImpact ? "#f4f4f5" : isConnected ? "#e4e4e7" : "#71717a"}
-                      fontSize={isTargetNode ? "12" : isSelected ? "11" : "9"}
+                      fontSize={isTargetNode ? "13" : isSelected ? "12" : "10"}
                       fontFamily="monospace"
                       fontWeight={isTargetNode || isSelected || isAffectedByImpact ? "bold" : "normal"}
                     >
