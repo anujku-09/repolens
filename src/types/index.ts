@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion, Source Code Ingestion, AST Analysis, Dependency Graph & Symbol Resolution (Feature 8A).
+ * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion, Source Code Ingestion, AST Analysis, Dependency Graph, Symbol Resolution & Architecture Health Scoring (Feature 8B).
  */
 
 export interface Profile {
@@ -388,4 +388,59 @@ export interface SymbolWithReferences extends RepositorySymbol {
     referencing_path: string;
     reference_type: ReferenceType;
   }[];
+}
+
+/**
+ * Architecture Health Scoring & Codebase Analytics Domain Types (Feature 8B)
+ */
+export interface LayerViolation {
+  sourcePath: string;
+  targetPath: string;
+  violationType: string;
+  reason: string;
+}
+
+export interface OrphanFile {
+  fileId: string;
+  path: string;
+}
+
+export interface FileInstabilityMetric {
+  path: string;
+  fanIn: number;
+  fanOut: number;
+  instability: number;
+}
+
+export interface ArchitectureAnalysisPayload {
+  layerViolations: LayerViolation[];
+  orphanFiles: OrphanFile[];
+  topInstableFiles: FileInstabilityMetric[];
+  mostCoupledFiles: { path: string; totalDegree: number }[];
+  scoringBreakdown: {
+    baseScore: number;
+    circularCyclesPenalty: number;
+    layerViolationsPenalty: number;
+    unusedExportsPenalty: number;
+    orphanFilesPenalty: number;
+  };
+}
+
+export interface RepositoryArchitectureScore {
+  id: string;
+  repository_id: string;
+  user_id: string;
+  health_score: number;
+  coupling_score: number;
+  cohesion_score: number;
+  modularity_score: number;
+  instability_index: number | null;
+  total_files_evaluated: number;
+  layer_violations_count: number;
+  orphan_files_count: number;
+  circular_cycles_count: number;
+  unused_exports_count: number;
+  analysis_payload: ArchitectureAnalysisPayload;
+  created_at: string;
+  updated_at: string;
 }

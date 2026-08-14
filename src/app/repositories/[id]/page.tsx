@@ -8,6 +8,7 @@ import { getRepositoryFileContentsSummary } from "@/lib/ingestion/source";
 import { getRepositoryAnalysisMap } from "@/lib/analysis/analyze-repository";
 import { getSerializedDependencyGraph } from "@/lib/analysis/dependency/build-graph";
 import { getRepositorySymbolSummary } from "@/lib/analysis/symbols/build-symbols";
+import { getRepositoryArchitectureScore } from "@/lib/analysis/architecture/score-architecture";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { IngestButton } from "@/components/repositories/ingest-button";
@@ -15,6 +16,7 @@ import { SourceIngestButton } from "@/components/repositories/source-ingest-butt
 import { AstAnalyzeButton } from "@/components/repositories/ast-analyze-button";
 import { DependencyGraphButton } from "@/components/repositories/dependency-graph-button";
 import { SymbolResolutionButton } from "@/components/repositories/symbol-resolution-button";
+import { ArchitectureScoreButton } from "@/components/repositories/architecture-score-button";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { CodebaseVisualizer } from "@/components/shared/codebase-visualizer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,7 +38,10 @@ import {
   AlertTriangle,
   Info,
   Package,
+  ShieldCheck,
+  Activity,
   Layers,
+  FileX,
 } from "lucide-react";
 
 function formatBytes(bytes: number): string {
@@ -90,6 +95,9 @@ export default async function RepositoryDetailsPage({
   // Fetch real symbol resolution summary from public.repository_symbols (Feature 8A)
   const { summary: symbolSummary } = await getRepositorySymbolSummary(repoId);
 
+  // Fetch real architecture score from public.repository_architecture_scores (Feature 8B)
+  const { score: archScore } = await getRepositoryArchitectureScore(repoId);
+
   // Compute stats dynamically from stored repository_files
   const totalFiles = files.filter((f) => f.type === "file").length;
   const totalDirectories = files.filter((f) => f.type === "directory").length;
@@ -127,6 +135,7 @@ export default async function RepositoryDetailsPage({
   const isSymbolsResolved = Boolean(
     symbolSummary && symbolSummary.totalDefinedSymbols > 0
   );
+  const isScoreComputed = Boolean(archScore && archScore.health_score !== undefined);
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 font-sans">
@@ -157,30 +166,6 @@ export default async function RepositoryDetailsPage({
                   File Tree Indexed
                 </Badge>
               )}
-              {isIndexing && (
-                <Badge variant="amber" className="font-mono text-xs animate-pulse">
-                  Indexing Tree...
-                </Badge>
-              )}
-              {!isIndexed && status === "connected" && (
-                <Badge variant="mono" className="font-mono text-xs text-zinc-400">
-                  Connected
-                </Badge>
-              )}
-
-              {isSourceIngested && (
-                <Badge variant="emerald" className="font-mono text-xs gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  <span>Source Ingested</span>
-                </Badge>
-              )}
-
-              {isAstAnalyzed && (
-                <Badge variant="emerald" className="font-mono text-xs gap-1">
-                  <Cpu className="h-3 w-3" />
-                  <span>AST Analyzed</span>
-                </Badge>
-              )}
 
               {isGraphBuilt && (
                 <Badge variant="emerald" className="font-mono text-xs gap-1">
@@ -189,10 +174,19 @@ export default async function RepositoryDetailsPage({
                 </Badge>
               )}
 
-              {isSymbolsResolved && (
-                <Badge variant="emerald" className="font-mono text-xs gap-1">
-                  <Code2 className="h-3 w-3 text-amber-400" />
-                  <span>Symbols Mapped</span>
+              {isScoreComputed && archScore && (
+                <Badge
+                  variant={
+                    archScore.health_score >= 80
+                      ? "emerald"
+                      : archScore.health_score >= 60
+                      ? "amber"
+                      : "rose"
+                  }
+                  className="font-mono text-xs gap-1"
+                >
+                  <ShieldCheck className="h-3 w-3" />
+                  <span>Health: {archScore.health_score}/100</span>
                 </Badge>
               )}
             </div>
@@ -225,52 +219,33 @@ export default async function RepositoryDetailsPage({
           </div>
         </div>
 
-        {/* Unindexed CTA Notice */}
-        {!isIndexed && status !== "indexing" && (
-          <Card className="border-emerald-500/30 bg-emerald-500/10 p-5 mb-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <Database className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-zinc-100 text-sm">
-                    Repository File Ingestion Required
-                  </h3>
-                  <p className="text-xs text-zinc-300 mt-0.5">
-                    This repository has not been ingested yet. Click &quot;Ingest Repository&quot; to fetch and index its complete Git file tree.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Pipeline Control Grid (Source Ingestion, AST Analysis, Dependency Graph & Symbol Resolution) */}
+        {/* Pipeline Control Grid (Source, AST, Graph, Symbols & Architecture Score) */}
         {isIndexed && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             {/* Source Ingestion Card */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <FileCode className="h-4 w-4 text-emerald-400" />
-                    <h3 className="text-sm font-semibold text-zinc-100">1. Source Ingestion</h3>
+                    <h3 className="text-xs font-semibold text-zinc-100">1. Source</h3>
                   </div>
                   {isSourceIngested ? (
-                    <Badge variant="emerald" className="font-mono text-[10px]">
-                      Indexed ({sourceCount} files)
+                    <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
+                      Indexed ({sourceCount})
                     </Badge>
                   ) : (
-                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
+                    <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
                       Pending
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-zinc-400 mt-2">
-                  Fetch raw UTF-8 file contents from GitHub Contents API for code files.
+                <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                  Fetch raw source code contents from GitHub.
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-zinc-800/80">
+              <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
                 <SourceIngestButton
                   repositoryId={repository.id}
                   isIngested={isSourceIngested}
@@ -280,29 +255,29 @@ export default async function RepositoryDetailsPage({
             </Card>
 
             {/* AST Structural Analysis Card */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Cpu className="h-4 w-4 text-sky-400" />
-                    <h3 className="text-sm font-semibold text-zinc-100">2. AST Analysis</h3>
+                    <h3 className="text-xs font-semibold text-zinc-100">2. AST Analysis</h3>
                   </div>
                   {isAstAnalyzed ? (
-                    <Badge variant="emerald" className="font-mono text-[10px]">
-                      Analyzed ({astSummary?.analyzedFiles} files)
+                    <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
+                      Analyzed ({astSummary?.analyzedFiles})
                     </Badge>
                   ) : (
-                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
-                      Pending Source
+                    <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
+                      Pending
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-zinc-400 mt-2">
-                  Extract imports, exports, functions, classes, and React components via TS Compiler AST.
+                <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                  Extract imports, exports, functions & classes.
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-zinc-800/80">
+              <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
                 <AstAnalyzeButton
                   repositoryId={repository.id}
                   isAnalyzed={isAstAnalyzed}
@@ -312,29 +287,29 @@ export default async function RepositoryDetailsPage({
             </Card>
 
             {/* Dependency Graph Builder Card */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <GitFork className="h-4 w-4 text-purple-400" />
-                    <h3 className="text-sm font-semibold text-zinc-100">3. Dependency Graph</h3>
+                    <h3 className="text-xs font-semibold text-zinc-100">3. Graph</h3>
                   </div>
                   {isGraphBuilt ? (
-                    <Badge variant="emerald" className="font-mono text-[10px]">
-                      Resolved ({serializedGraph.edges.length} edges)
+                    <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
+                      Resolved ({serializedGraph.edges.length})
                     </Badge>
                   ) : (
-                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
-                      Pending AST
+                    <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
+                      Pending
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-zinc-400 mt-2">
-                  Resolve internal import paths, detect circular dependencies, and build dependency graph.
+                <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                  Resolve imports & detect circular cycles.
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-zinc-800/80">
+              <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
                 <DependencyGraphButton
                   repositoryId={repository.id}
                   isGraphBuilt={isGraphBuilt}
@@ -344,29 +319,29 @@ export default async function RepositoryDetailsPage({
             </Card>
 
             {/* Symbol Resolution Card (Feature 8A) */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Code2 className="h-4 w-4 text-amber-400" />
-                    <h3 className="text-sm font-semibold text-zinc-100">4. Symbol Mapping</h3>
+                    <h3 className="text-xs font-semibold text-zinc-100">4. Symbols</h3>
                   </div>
                   {isSymbolsResolved ? (
-                    <Badge variant="emerald" className="font-mono text-[10px]">
-                      Mapped ({symbolSummary?.totalDefinedSymbols} symbols)
+                    <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
+                      Mapped ({symbolSummary?.totalDefinedSymbols})
                     </Badge>
                   ) : (
-                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
-                      Pending Graph
+                    <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
+                      Pending
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-zinc-400 mt-2">
-                  Connect functions, classes & components to cross-file usages. Detect unused exports.
+                <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                  Map definitions & usage across files.
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-zinc-800/80">
+              <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
                 <SymbolResolutionButton
                   repositoryId={repository.id}
                   isSymbolsResolved={isSymbolsResolved}
@@ -374,7 +349,154 @@ export default async function RepositoryDetailsPage({
                 />
               </div>
             </Card>
+
+            {/* Architecture Score Card (Feature 8B) */}
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                    <h3 className="text-xs font-semibold text-zinc-100">5. Health Score</h3>
+                  </div>
+                  {isScoreComputed && archScore ? (
+                    <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
+                      Score: {archScore.health_score}/100
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
+                      Pending
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                  Evaluate coupling, modularity & layer violations.
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
+                <ArchitectureScoreButton
+                  repositoryId={repository.id}
+                  isScoreComputed={isScoreComputed}
+                  disabled={!isGraphBuilt}
+                />
+              </div>
+            </Card>
           </div>
+        )}
+
+        {/* Architecture Health Dashboard Card (Feature 8B) */}
+        {isScoreComputed && archScore && (
+          <Card className="border-emerald-500/30 bg-emerald-500/5 p-5 mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-emerald-500/20 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono font-bold text-xl shadow-inner">
+                  {archScore.health_score}
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+                    <span>Architecture Quality & Health Dashboard</span>
+                    <Badge
+                      variant={
+                        archScore.health_score >= 80
+                          ? "emerald"
+                          : archScore.health_score >= 60
+                          ? "amber"
+                          : "rose"
+                      }
+                      className="font-mono text-xs"
+                    >
+                      {archScore.health_score >= 80
+                        ? "Excellent Modularity"
+                        : archScore.health_score >= 60
+                        ? "Moderate Quality"
+                        : "High Risk Architecture"}
+                    </Badge>
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-0.5 font-mono">
+                    Evaluated across {archScore.total_files_evaluated} code files with Martin&apos;s Instability Index ({archScore.instability_index || 0.5}).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Scores Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-6">
+              <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Coupling Score</span>
+                <p className="text-xl font-bold text-sky-400 mt-0.5">
+                  {archScore.coupling_score}/100
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Cohesion Score</span>
+                <p className="text-xl font-bold text-emerald-400 mt-0.5">
+                  {archScore.cohesion_score}/100
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Modularity Score</span>
+                <p className="text-xl font-bold text-purple-400 mt-0.5">
+                  {archScore.modularity_score}/100
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Avg Instability (I)</span>
+                <p className="text-xl font-bold text-amber-400 mt-0.5">
+                  {archScore.instability_index || 0.5}
+                </p>
+              </div>
+            </div>
+
+            {/* Layer Violations Warning List */}
+            {archScore.analysis_payload?.layerViolations?.length > 0 && (
+              <div className="pt-3 border-t border-emerald-500/20 mb-4">
+                <label className="text-[11px] font-mono text-amber-300 uppercase tracking-wider flex items-center gap-1.5 mb-2 font-semibold">
+                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                  <span>Layer Violations Detected ({archScore.layer_violations_count})</span>
+                </label>
+                <div className="space-y-1.5 font-mono text-xs">
+                  {archScore.analysis_payload.layerViolations.map((v, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded bg-zinc-950 p-2.5 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
+                    >
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-amber-400 text-[11px]">{v.violationType}</span>
+                        <p className="text-[11px] text-zinc-300">
+                          <code className="text-sky-300">{v.sourcePath}</code> &rarr;{" "}
+                          <code className="text-rose-300">{v.targetPath}</code>
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-zinc-500 italic max-w-xs">{v.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Orphan Files List */}
+            {archScore.analysis_payload?.orphanFiles?.length > 0 && (
+              <div className="pt-3 border-t border-emerald-500/20">
+                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                  <FileX className="h-3.5 w-3.5 text-purple-400" />
+                  <span>Orphan / Unreachable Code Files ({archScore.orphan_files_count})</span>
+                </label>
+                <div className="flex flex-wrap gap-2 text-xs font-mono">
+                  {archScore.analysis_payload.orphanFiles.slice(0, 8).map((orphan) => (
+                    <div
+                      key={orphan.path}
+                      className="inline-flex items-center gap-1.5 rounded bg-zinc-950 px-2.5 py-1 text-purple-300 border border-zinc-800"
+                    >
+                      <span>{orphan.path}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
         )}
 
         {/* Symbol Intelligence Metrics Card (Feature 8A) */}
@@ -443,28 +565,6 @@ export default async function RepositoryDetailsPage({
                 </div>
               </div>
             )}
-
-            {/* Unused Exports List */}
-            {symbolSummary.unusedExports.length > 0 && (
-              <div className="pt-3 mt-3 border-t border-amber-500/20">
-                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Unused Exports (Exported but Never Imported Elsewhere)</span>
-                </label>
-                <div className="flex flex-wrap gap-2 text-xs font-mono">
-                  {symbolSummary.unusedExports.slice(0, 10).map((exp) => (
-                    <div
-                      key={`${exp.defining_path}:${exp.symbol_name}`}
-                      className="inline-flex items-center gap-1.5 rounded bg-zinc-950 px-2.5 py-1 text-rose-300 border border-zinc-800"
-                    >
-                      <span className="font-semibold">{exp.symbol_name}</span>
-                      <span className="text-[10px] text-zinc-500">({exp.kind})</span>
-                      <span className="text-[10px] text-zinc-600">in {exp.defining_path}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </Card>
         )}
 
@@ -513,51 +613,10 @@ export default async function RepositoryDetailsPage({
                 </p>
               </div>
             </div>
-
-            {/* Top Imported Files Breakdown */}
-            {serializedGraph.summary.mostImportedFiles.length > 0 && (
-              <div className="pt-3 border-t border-purple-500/20">
-                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-2">
-                  Top Imported Files (Most Depended On)
-                </label>
-                <div className="flex flex-wrap gap-2 text-xs font-mono">
-                  {serializedGraph.summary.mostImportedFiles.map((file) => (
-                    <div
-                      key={file.path}
-                      className="inline-flex items-center gap-2 rounded bg-zinc-950 px-2.5 py-1 text-zinc-300 border border-zinc-800"
-                    >
-                      <span className="truncate max-w-[200px]">{file.path}</span>
-                      <span className="text-purple-400 font-bold">({file.count} imports)</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* External Package Dependencies Breakdown */}
-            {serializedGraph.summary.externalPackages.length > 0 && (
-              <div className="pt-3 mt-3 border-t border-purple-500/20">
-                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                  <Package className="h-3.5 w-3.5 text-sky-400" />
-                  <span>External Package Dependencies ({serializedGraph.summary.externalPackages.length})</span>
-                </label>
-                <div className="flex flex-wrap gap-2 text-xs font-mono">
-                  {serializedGraph.summary.externalPackages.slice(0, 10).map((pkg) => (
-                    <div
-                      key={pkg.name}
-                      className="inline-flex items-center gap-2 rounded bg-zinc-950 px-2 py-1 text-sky-300 border border-zinc-800"
-                    >
-                      <span className="font-semibold">{pkg.name}</span>
-                      <span className="text-zinc-500">({pkg.count})</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </Card>
         )}
 
-        {/* Codebase Dependency Network Visualizer (Feature 7 & 8) */}
+        {/* Codebase Dependency Network Visualizer */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
@@ -623,105 +682,6 @@ export default async function RepositoryDetailsPage({
             </CardHeader>
           </Card>
         </div>
-
-        {/* Extracted AST Facts Summary Grid */}
-        {isAstAnalyzed && astSummary && (
-          <Card className="border-zinc-800 bg-zinc-900/40 p-5 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Cpu className="h-4 w-4 text-sky-400" />
-                <h3 className="text-sm font-semibold text-zinc-100">
-                  Extracted Code Structure Metrics
-                </h3>
-              </div>
-              {astSummary.unsupportedLanguages.length > 0 && (
-                <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                  <Info className="h-3 w-3" />
-                  <span>{astSummary.unsupportedLanguages.join(", ")}: AST parser not available yet</span>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 font-mono">
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-500 uppercase">Analyzed Files</span>
-                <p className="text-lg font-bold text-sky-400 mt-0.5">{astSummary.analyzedFiles}</p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-500 uppercase">Imports</span>
-                <p className="text-lg font-bold text-zinc-200 mt-0.5">{astSummary.imports}</p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-500 uppercase">Exports</span>
-                <p className="text-lg font-bold text-zinc-200 mt-0.5">{astSummary.exports}</p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-500 uppercase">Functions</span>
-                <p className="text-lg font-bold text-emerald-400 mt-0.5">{astSummary.functions}</p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-500 uppercase">Classes</span>
-                <p className="text-lg font-bold text-purple-400 mt-0.5">{astSummary.classes}</p>
-              </div>
-
-              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-500 uppercase">React Components</span>
-                <p className="text-lg font-bold text-amber-400 mt-0.5">{astSummary.components}</p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Primary Languages Breakdown */}
-        {languageList.length > 0 && (
-          <Card className="border-zinc-800 bg-zinc-900/40 p-5 mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Code2 className="h-4 w-4 text-emerald-400" />
-              <h3 className="text-sm font-semibold text-zinc-100">Primary Languages Breakdown</h3>
-            </div>
-
-            <div className="space-y-3">
-              {/* Stacked Percentage Bar */}
-              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
-                {languageList.slice(0, 6).map((lang, i) => {
-                  const colors = [
-                    "bg-emerald-500",
-                    "bg-sky-500",
-                    "bg-amber-500",
-                    "bg-purple-500",
-                    "bg-rose-500",
-                    "bg-indigo-500",
-                  ];
-                  return (
-                    <div
-                      key={lang.name}
-                      style={{ width: `${Math.max(lang.percent, 1)}%` }}
-                      className={`${colors[i % colors.length]} transition-all`}
-                      title={`${lang.name}: ${lang.percent.toFixed(1)}%`}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* Language Badges Grid */}
-              <div className="flex flex-wrap gap-4 pt-1 text-xs font-mono text-zinc-400">
-                {languageList.map((lang) => (
-                  <div key={lang.name} className="flex items-center gap-2">
-                    <span className="font-semibold text-zinc-200">{lang.name}:</span>
-                    <span>
-                      {lang.count} files ({formatBytes(lang.bytes)})
-                    </span>
-                    <span className="text-zinc-500">({lang.percent.toFixed(1)}%)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-        )}
 
         {/* Interactive File Tree Explorer Component */}
         <FileTreeExplorer
