@@ -337,7 +337,13 @@ export async function buildRepositorySymbols(
       norm.endsWith("postcss.config.js") ||
       norm.endsWith("tailwind.config.js") ||
       norm.endsWith("tailwind.config.ts") ||
-      norm.endsWith("package.json")
+      norm.endsWith("package.json") ||
+      norm.endsWith("setup.py") ||
+      norm.endsWith("manage.py") ||
+      norm.endsWith("wsgi.py") ||
+      norm.endsWith("asgi.py") ||
+      norm.endsWith("main.py") ||
+      norm.endsWith("app.py")
     ) {
       return true;
     }

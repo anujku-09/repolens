@@ -31,6 +31,14 @@ export function isTypeScriptAstSupported(fileName: string): boolean {
 }
 
 /**
+ * Checks if a file is a Python source file.
+ */
+export function isPythonSupported(fileName: string): boolean {
+  const ext = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();
+  return ext === ".py";
+}
+
+/**
  * Safely parses raw source code text into a TypeScript SourceFile AST.
  * Handles syntax errors gracefully without throwing unhandled exceptions.
  */

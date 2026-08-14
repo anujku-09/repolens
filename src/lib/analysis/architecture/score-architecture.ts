@@ -119,7 +119,7 @@ export async function buildRepositoryArchitectureScore(
   const orphanFiles: OrphanFile[] = [];
   const isExcludedFromOrphanCheck = (path: string) => {
     const p = path.toLowerCase();
-    // Exclude static assets, config files, markdown, json, lockfiles, and Next.js entry points
+    // Exclude static assets, config files, markdown, json, lockfiles, Python entry points, and framework entry points
     return (
       p.startsWith("public/") ||
       p.endsWith(".svg") ||
@@ -133,12 +133,25 @@ export async function buildRepositoryArchitectureScore(
       p.includes("package-lock") ||
       p.includes("config.") ||
       p.endsWith("page.tsx") ||
+      p.endsWith("page.js") ||
       p.endsWith("layout.tsx") ||
+      p.endsWith("layout.js") ||
       p.endsWith("route.ts") ||
+      p.endsWith("route.js") ||
       p.endsWith("middleware.ts") ||
+      p.endsWith("middleware.js") ||
       p.endsWith("global-error.tsx") ||
       p.endsWith("error.tsx") ||
-      p.endsWith("not-found.tsx")
+      p.endsWith("loading.tsx") ||
+      p.endsWith("not-found.tsx") ||
+      p.endsWith("index.ts") ||
+      p.endsWith("index.js") ||
+      p.endsWith("main.py") ||
+      p.endsWith("app.py") ||
+      p.endsWith("manage.py") ||
+      p.endsWith("server.py") ||
+      p.endsWith("setup.py") ||
+      p.endsWith("__init__.py")
     );
   };
 

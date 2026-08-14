@@ -1,7 +1,8 @@
 import ts from "typescript";
 import { createClient } from "@/lib/supabase/server";
-import { isTypeScriptAstSupported, parseTypeScriptSource } from "@/lib/analysis/ast/parser";
+import { isTypeScriptAstSupported, isPythonSupported, parseTypeScriptSource } from "@/lib/analysis/ast/parser";
 import { extractStructuralFacts } from "@/lib/analysis/ast/extractor";
+import { extractPythonStructuralFacts } from "@/lib/analysis/ast/python-extractor";
 import { RepositoryFileAnalysis, FileAnalysisPayload } from "@/types";
 
 export interface AnalyzeFileResult {
@@ -55,7 +56,49 @@ export async function analyzeRepositoryFile(
 
   const language = file.language || file.extension || "unknown";
 
-  // 3. Handle unsupported extensions safely without failing the repository
+  // 3. Handle Python AST extraction
+  if (isPythonSupported(file.path)) {
+    const pythonPayload = extractPythonStructuralFacts(fileContent.content);
+
+    const { data: pythonRecord, error: upsertError } = await supabase
+      .from("repository_file_analysis")
+      .upsert(
+        {
+          repository_file_id: repositoryFileId,
+          repository_id: file.repository_id,
+          user_id: user.id,
+          language: "python",
+          parser: "python_regex_ast",
+          parser_version: "1.0",
+          analysis: pythonPayload,
+          imports_count: pythonPayload.imports.length,
+          exports_count: pythonPayload.exports.length,
+          functions_count: pythonPayload.functions.length,
+          classes_count: pythonPayload.classes.length,
+          variables_count: pythonPayload.variables.length,
+          components_count: 0,
+          status: "analyzed",
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "repository_file_id" }
+      )
+      .select()
+      .single();
+
+    if (upsertError) {
+      console.error("[analyzeRepositoryFile Python Upsert Error]:", upsertError);
+      return { success: false, status: "failed", error: upsertError.message };
+    }
+
+    return {
+      success: true,
+      status: "analyzed",
+      record: pythonRecord as RepositoryFileAnalysis,
+    };
+  }
+
+  // 4. Handle unsupported extensions safely without failing the repository
   if (!isTypeScriptAstSupported(file.path)) {
     const emptyPayload: FileAnalysisPayload = {
       imports: [],
