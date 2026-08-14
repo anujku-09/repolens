@@ -191,3 +191,35 @@ export async function ingestRepositorySource(
     error: null,
   };
 }
+
+/**
+ * Fetch raw UTF-8 source code content for a single repository file.
+ */
+export async function getSingleFileContent(
+  fileId: string
+): Promise<{ content: string | null; size: number | null; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { content: null, size: null, error: "Unauthorized" };
+  }
+
+  const { data, error } = await supabase
+    .from("repository_file_contents")
+    .select("content, size")
+    .eq("repository_file_id", fileId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { content: null, size: null, error: error?.message || "Source content not ingested yet." };
+  }
+
+  return {
+    content: data.content,
+    size: data.size,
+    error: null,
+  };
+}

@@ -7,6 +7,7 @@ import { ingestRepositorySource } from "@/lib/ingestion/source";
 import { analyzeRepository } from "@/lib/analysis/analyze-repository";
 import { buildRepositoryDependencyGraph } from "@/lib/analysis/dependency/build-graph";
 import { buildRepositorySymbols } from "@/lib/analysis/symbols/build-symbols";
+import { getSingleFileContent } from "@/lib/ingestion/source";
 import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
@@ -151,4 +152,14 @@ export async function deleteRepositoryAction(id: string) {
     revalidatePath("/dashboard");
   }
   return { success, error };
+}
+
+/**
+ * Server Action: Fetch raw source code content for a single file.
+ */
+export async function getFileSourceAction(fileId: string) {
+  if (!fileId) {
+    return { content: null, size: null, error: "Missing file ID." };
+  }
+  return await getSingleFileContent(fileId);
 }

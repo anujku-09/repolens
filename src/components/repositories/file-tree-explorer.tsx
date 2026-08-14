@@ -1,33 +1,40 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { RepositoryFile, RepositoryFileAnalysis, SerializedGraphData } from "@/types";
-import { isAnalyzableSourceFile } from "@/lib/ingestion/source-policy";
+import {
+  RepositoryFile,
+  RepositoryFileAnalysis,
+  SerializedGraphData,
+  GraphNode,
+} from "@/types";
+import { getFileSourceAction } from "@/app/repositories/actions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
+  FileText,
   Folder,
   FolderOpen,
-  FileCode,
-  FileText,
-  FileJson,
-  FileImage,
-  File,
-  Search,
   ChevronRight,
   ChevronDown,
-  Maximize2,
-  Minimize2,
+  Search,
   HardDrive,
-  Info,
+  Cpu,
   CheckCircle2,
   XCircle,
-  Cpu,
   AlertCircle,
+  Info,
   GitFork,
   ArrowRight,
   ArrowLeft,
+  Code2,
+  Eye,
+  Loader2,
+  Copy,
+  Check,
+  X,
 } from "lucide-react";
+import { isAnalyzableSourceFile } from "@/lib/ingestion/source-policy";
 
 interface FileTreeExplorerProps {
   files: RepositoryFile[];
@@ -41,50 +48,44 @@ interface TreeNode {
   children: TreeNode[];
 }
 
-/**
- * Format raw byte size into human-readable B, KB, MB
- */
 function formatBytes(bytes: number | null): string {
-  if (bytes === null || bytes === undefined || bytes === 0) return "--";
+  if (!bytes || bytes === 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 /**
- * Get icon component for a file based on its extension / language
+ * Constructs a hierarchical tree from flat database repository_files array
  */
-function getFileIcon(file: RepositoryFile) {
-  if (file.type === "directory") {
-    return null; // Handled dynamically for open/closed state
-  }
+function buildTree(files: RepositoryFile[]): TreeNode[] {
+  const nodeMap = new Map<string, TreeNode>();
+  const roots: TreeNode[] = [];
 
-  const ext = file.extension?.toLowerCase();
-  const lang = file.language?.toLowerCase();
+  const sortedFiles = [...files].sort((a, b) => {
+    if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
-  if (lang === "json" || ext === ".json") {
-    return <FileJson className="h-4 w-4 text-amber-400 shrink-0" />;
-  }
-  if (lang === "markdown" || ext === ".md") {
-    return <FileText className="h-4 w-4 text-sky-400 shrink-0" />;
-  }
-  if (ext === ".png" || ext === ".jpg" || ext === ".jpeg" || ext === ".svg" || ext === ".gif") {
-    return <FileImage className="h-4 w-4 text-purple-400 shrink-0" />;
-  }
-  if (
-    lang === "typescript" ||
-    lang === "javascript" ||
-    lang === "python" ||
-    lang === "go" ||
-    lang === "rust" ||
-    lang === "c/c++" ||
-    lang === "html" ||
-    lang === "css"
-  ) {
-    return <FileCode className="h-4 w-4 text-emerald-400 shrink-0" />;
-  }
+  sortedFiles.forEach((file) => {
+    nodeMap.set(file.path, { file, children: [] });
+  });
 
-  return <File className="h-4 w-4 text-zinc-400 shrink-0" />;
+  sortedFiles.forEach((file) => {
+    const node = nodeMap.get(file.path)!;
+    if (!file.parent_path) {
+      roots.push(node);
+    } else {
+      const parentNode = nodeMap.get(file.parent_path);
+      if (parentNode) {
+        parentNode.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+  });
+
+  return roots;
 }
 
 export function FileTreeExplorer({
@@ -94,63 +95,19 @@ export function FileTreeExplorer({
   graphData = null,
 }: FileTreeExplorerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set([""]));
   const [selectedFile, setSelectedFile] = useState<RepositoryFile | null>(null);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(
+    () => new Set(files.filter((f) => f.depth <= 1).map((f) => f.path))
+  );
 
-  // Build recursive tree structure from flat file list
-  const treeNodes = useMemo(() => {
-    const nodeMap = new Map<string, TreeNode>();
-    const rootNodes: TreeNode[] = [];
+  // Source Viewer Modal State
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isFetchingSource, setIsFetchingSource] = useState(false);
+  const [sourceCode, setSourceCode] = useState<string | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
 
-    // Sort files so directories come first, then files alphabetically
-    const sortedFiles = [...files].sort((a, b) => {
-      if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
-      return a.path.localeCompare(b.path);
-    });
-
-    sortedFiles.forEach((file) => {
-      const node: TreeNode = { file, children: [] };
-      nodeMap.set(file.path, node);
-
-      if (!file.parent_path) {
-        rootNodes.push(node);
-      } else {
-        const parentNode = nodeMap.get(file.parent_path);
-        if (parentNode) {
-          parentNode.children.push(node);
-        } else {
-          // Fallback root item
-          rootNodes.push(node);
-        }
-      }
-    });
-
-    return rootNodes;
-  }, [files]);
-
-  // Filtered files for search
-  const filteredFiles = useMemo(() => {
-    if (!searchQuery.trim()) return null;
-    const q = searchQuery.toLowerCase().trim();
-    return files.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q) ||
-        f.path.toLowerCase().includes(q) ||
-        (f.extension && f.extension.toLowerCase().includes(q))
-    );
-  }, [files, searchQuery]);
-
-  // Fast map lookup for selected file node dependencies in graph
-  const graphNodeMap = useMemo(() => {
-    const map = new Map<string, NonNullable<SerializedGraphData["nodes"]>[0]>();
-    if (graphData && graphData.nodes) {
-      graphData.nodes.forEach((n) => {
-        map.set(n.id, n);
-        map.set(n.path, n);
-      });
-    }
-    return map;
-  }, [graphData]);
+  const tree = useMemo(() => buildTree(files), [files]);
 
   const toggleExpand = (path: string) => {
     setExpandedPaths((prev) => {
@@ -164,26 +121,68 @@ export function FileTreeExplorer({
     });
   };
 
-  const expandAll = () => {
-    const allDirs = files.filter((f) => f.type === "directory").map((f) => f.path);
-    setExpandedPaths(new Set([...allDirs, ""]));
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const query = searchQuery.toLowerCase().trim();
+    return files.filter(
+      (f) =>
+        f.name.toLowerCase().includes(query) ||
+        f.path.toLowerCase().includes(query) ||
+        (f.language && f.language.toLowerCase().includes(query))
+    );
+  }, [files, searchQuery]);
+
+  const selectedAnalysis = selectedFile ? analysisMap.get(selectedFile.id) : null;
+
+  const selectedGraphNode: GraphNode | null = useMemo(() => {
+    if (!selectedFile || !graphData?.nodes) return null;
+    return (
+      graphData.nodes.find(
+        (n) => n.id === selectedFile.id || n.path === selectedFile.path
+      ) || null
+    );
+  }, [selectedFile, graphData]);
+
+  // Handler: Open Source Viewer Modal for selected file
+  const handleOpenSourceViewer = async () => {
+    if (!selectedFile) return;
+    setIsViewerOpen(true);
+    setIsFetchingSource(true);
+    setSourceError(null);
+    setSourceCode(null);
+
+    try {
+      const res = await getFileSourceAction(selectedFile.id);
+      if (res.error || res.content === null) {
+        setSourceError(res.error || "Source code content unavailable.");
+      } else {
+        setSourceCode(res.content);
+      }
+    } catch (err) {
+      console.error("[handleOpenSourceViewer Error]:", err);
+      setSourceError("Failed to fetch source code content.");
+    } finally {
+      setIsFetchingSource(false);
+    }
   };
 
-  const collapseAll = () => {
-    setExpandedPaths(new Set());
+  const handleCopySource = () => {
+    if (!sourceCode) return;
+    navigator.clipboard.writeText(sourceCode);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Render a single node in tree view
-  const renderTreeNode = (node: TreeNode) => {
+  const renderTreeNode = (node: TreeNode, depth = 0) => {
     const { file, children } = node;
-    const isDir = file.type === "directory";
     const isExpanded = expandedPaths.has(file.path);
     const isSelected = selectedFile?.id === file.id;
-    const isSourceIngested = ingestedFileIds.has(file.id);
-    const analysis = analysisMap.get(file.id);
+    const isDir = file.type === "directory";
+    const hasSource = ingestedFileIds.has(file.id);
+    const isAnalyzed = analysisMap.get(file.id)?.status === "analyzed";
 
     return (
-      <div key={file.id} className="select-none font-mono text-xs">
+      <div key={file.id} className="select-none">
         <div
           onClick={() => {
             if (isDir) {
@@ -191,162 +190,129 @@ export function FileTreeExplorer({
             }
             setSelectedFile(file);
           }}
-          className={`flex items-center justify-between rounded-md px-2 py-1.5 cursor-pointer transition-colors ${
+          style={{ paddingLeft: `${depth * 14 + 12}px` }}
+          className={`flex items-center justify-between py-1.5 pr-3 text-xs font-mono transition-colors cursor-pointer rounded-md my-0.5 ${
             isSelected
-              ? "bg-emerald-500/15 text-emerald-300 font-semibold"
-              : "hover:bg-zinc-800/60 text-zinc-300"
+              ? "bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30"
+              : "text-zinc-300 hover:bg-zinc-800/60 hover:text-zinc-100"
           }`}
-          style={{ paddingLeft: `${Math.max(file.depth * 14, 8)}px` }}
         >
-          <div className="flex items-center gap-1.5 truncate">
+          <div className="flex items-center gap-2 truncate">
             {isDir ? (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleExpand(file.path);
-                  }}
-                  className="p-0.5 text-zinc-500 hover:text-zinc-300"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  )}
-                </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand(file.path);
+                }}
+                className="text-zinc-500 hover:text-zinc-300"
+              >
                 {isExpanded ? (
-                  <FolderOpen className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <ChevronDown className="h-3.5 w-3.5" />
                 ) : (
-                  <Folder className="h-4 w-4 text-emerald-500/80 shrink-0" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 )}
-              </>
+              </button>
             ) : (
-              <>
-                <span className="w-4" /> {/* Spacer for tree alignment */}
-                {getFileIcon(file)}
-              </>
+              <span className="w-3.5" />
+            )}
+
+            {isDir ? (
+              isExpanded ? (
+                <FolderOpen className="h-4 w-4 text-sky-400 shrink-0" />
+              ) : (
+                <Folder className="h-4 w-4 text-sky-400 shrink-0" />
+              )
+            ) : (
+              <FileText className="h-4 w-4 text-zinc-400 shrink-0" />
             )}
 
             <span className="truncate">{file.name}</span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 text-[11px] text-zinc-500">
-            {analysis?.status === "analyzed" && (
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-400" title="AST Structure Analyzed" />
+          <div className="flex items-center gap-2 text-[10px] shrink-0">
+            {isAnalyzed && (
+              <span className="rounded bg-sky-500/10 px-1 py-0.5 text-sky-400 border border-sky-500/20 font-mono">
+                AST
+              </span>
             )}
-            {isSourceIngested && (
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" title="Source Content Indexed" />
-            )}
-            {file.language && (
-              <Badge variant="mono" className="text-[10px] py-0 px-1.5">
-                {file.language}
-              </Badge>
+            {hasSource && (
+              <span className="rounded bg-emerald-500/10 px-1 py-0.5 text-emerald-400 border border-emerald-500/20 font-mono">
+                Source
+              </span>
             )}
             {!isDir && file.size !== null && (
-              <span className="text-zinc-500">{formatBytes(file.size)}</span>
+              <span className="text-zinc-500 font-mono hidden sm:inline">
+                {formatBytes(file.size)}
+              </span>
             )}
           </div>
         </div>
 
-        {/* Recursive Children Rendering */}
         {isDir && isExpanded && children.length > 0 && (
-          <div className="border-l border-zinc-800/60 ml-3.5">
-            {children.map(renderTreeNode)}
+          <div className="space-y-0.5">
+            {children.map((child) => renderTreeNode(child, depth + 1))}
           </div>
         )}
       </div>
     );
   };
 
-  if (files.length === 0) {
-    return (
-      <Card className="border-dashed border-zinc-800 bg-zinc-950/50 p-8 text-center">
-        <Folder className="mx-auto h-8 w-8 text-zinc-600 mb-2" />
-        <h4 className="text-sm font-semibold text-zinc-300">No file tree indexed yet</h4>
-        <p className="text-xs text-zinc-500 mt-1">
-          Click &quot;Ingest Repository&quot; to fetch and parse the file structure.
-        </p>
-      </Card>
-    );
-  }
-
-  const selectedAnalysis = selectedFile ? analysisMap.get(selectedFile.id) : undefined;
-  const selectedGraphNode = selectedFile
-    ? graphNodeMap.get(selectedFile.id) || graphNodeMap.get(selectedFile.path)
-    : undefined;
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Column: Interactive Tree Explorer */}
-      <Card className="lg:col-span-2 border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
-        <div className="space-y-4">
-          {/* Header Controls */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Left Column: Repository Tree Navigator */}
+      <Card className="lg:col-span-7 border-zinc-800 bg-zinc-900/50 p-4 sm:p-5 flex flex-col justify-between">
+        <div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-zinc-800">
+            <div>
+              <h3 className="text-base font-semibold text-zinc-100">Repository File Tree</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Browse directories and select specific code files to inspect AST facts & source content.
+              </p>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter files by name or extension..."
-                className="w-full rounded-md border border-zinc-800 bg-zinc-950 pl-8 pr-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none transition-colors"
+                placeholder="Filter files..."
+                className="w-full sm:w-48 rounded-md border border-zinc-800 bg-zinc-950 pl-8 pr-3 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none transition-colors font-mono"
               />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={expandAll}
-                className="inline-flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] font-mono text-zinc-400 hover:text-zinc-100 transition-colors"
-              >
-                <Maximize2 className="h-3 w-3" />
-                <span>Expand All</span>
-              </button>
-              <button
-                type="button"
-                onClick={collapseAll}
-                className="inline-flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] font-mono text-zinc-400 hover:text-zinc-100 transition-colors"
-              >
-                <Minimize2 className="h-3 w-3" />
-                <span>Collapse All</span>
-              </button>
             </div>
           </div>
 
-          {/* Tree Explorer View */}
-          <div className="max-h-[500px] overflow-y-auto space-y-0.5 pr-2 custom-scrollbar">
+          <div className="mt-3 max-h-[520px] overflow-y-auto pr-1 custom-scrollbar">
             {filteredFiles ? (
-              // Search Mode View
               filteredFiles.length === 0 ? (
-                <div className="text-center py-8 text-xs text-zinc-500">
+                <div className="py-8 text-center text-xs text-zinc-500 font-mono">
                   No files matching &quot;{searchQuery}&quot;
                 </div>
               ) : (
-                filteredFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    onClick={() => setSelectedFile(file)}
-                    className={`flex items-center justify-between rounded-md p-2 cursor-pointer font-mono text-xs transition-colors ${
-                      selectedFile?.id === file.id
-                        ? "bg-emerald-500/15 text-emerald-300 font-semibold"
-                        : "hover:bg-zinc-800/60 text-zinc-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      {getFileIcon(file)}
-                      <span className="truncate">{file.path}</span>
+                <div className="space-y-0.5">
+                  {filteredFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      onClick={() => setSelectedFile(file)}
+                      className={`flex items-center justify-between p-2 text-xs font-mono rounded-md cursor-pointer transition-colors ${
+                        selectedFile?.id === file.id
+                          ? "bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30"
+                          : "text-zinc-300 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="h-4 w-4 text-zinc-400 shrink-0" />
+                        <span className="truncate">{file.path}</span>
+                      </div>
+                      <span className="text-[10px] text-zinc-500 shrink-0 font-mono">
+                        {formatBytes(file.size)}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-zinc-500 shrink-0">
-                      {file.language && <Badge variant="mono">{file.language}</Badge>}
-                      <span>{formatBytes(file.size)}</span>
-                    </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )
             ) : (
-              // Standard Tree View
-              treeNodes.map(renderTreeNode)
+              tree.map((node) => renderTreeNode(node))
             )}
           </div>
         </div>
@@ -358,15 +324,28 @@ export function FileTreeExplorer({
       </Card>
 
       {/* Right Column: File Detail Inspector Panel */}
-      <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+      <Card className="lg:col-span-5 border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
         <div>
-          <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
-            <HardDrive className="h-4 w-4 text-emerald-400" />
-            <h3 className="text-sm font-semibold text-zinc-100">File Inspector</h3>
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+            <div className="flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-emerald-400" />
+              <h3 className="text-sm font-semibold text-zinc-100">Specific File Inspector</h3>
+            </div>
+            {selectedFile && ingestedFileIds.has(selectedFile.id) && (
+              <Button
+                onClick={handleOpenSourceViewer}
+                size="sm"
+                className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-7 px-2.5 shadow-sm gap-1 cursor-pointer font-mono"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                <span>View Source Code</span>
+              </Button>
+            )}
           </div>
 
           {selectedFile ? (
             <div className="mt-4 space-y-4 font-mono text-xs">
+              {/* File Name & Path */}
               <div>
                 <label className="text-[11px] text-zinc-500 uppercase tracking-wider">
                   File Name
@@ -385,12 +364,12 @@ export function FileTreeExplorer({
                 </p>
               </div>
 
-              {/* Dependency Intelligence Breakdown (Feature 7) */}
+              {/* Dependency Intelligence Breakdown */}
               {selectedGraphNode && (
                 <div>
                   <label className="text-[11px] text-zinc-500 uppercase tracking-wider flex items-center gap-1">
                     <GitFork className="h-3 w-3 text-purple-400" />
-                    <span>Dependency Graph Intelligence</span>
+                    <span>File Dependency Edges</span>
                   </label>
 
                   <div className="grid grid-cols-2 gap-2 text-center mt-1">
@@ -453,7 +432,7 @@ export function FileTreeExplorer({
                 <label className="text-[11px] text-zinc-500 uppercase tracking-wider">
                   Source Content Status
                 </label>
-                <div className="mt-1">
+                <div className="mt-1 flex items-center justify-between">
                   {ingestedFileIds.has(selectedFile.id) ? (
                     <Badge variant="emerald" className="gap-1 font-mono text-[11px]">
                       <CheckCircle2 className="h-3 w-3" />
@@ -472,10 +451,10 @@ export function FileTreeExplorer({
                 </div>
               </div>
 
-              {/* AST Analysis Status & Structural Facts Breakdown */}
+              {/* AST Analysis Status & Defined Symbols List */}
               <div>
                 <label className="text-[11px] text-zinc-500 uppercase tracking-wider">
-                  AST Structural Facts
+                  AST Structural Facts & Defined Symbols
                 </label>
                 <div className="mt-1">
                   {selectedAnalysis?.status === "analyzed" ? (
@@ -511,16 +490,70 @@ export function FileTreeExplorer({
                           <strong className="text-amber-400">{selectedAnalysis.components_count}</strong>
                         </div>
                       </div>
+
+                      {/* Display Exact Symbol Names Defined in this File */}
+                      {selectedAnalysis.analysis && (
+                        <div className="space-y-2 pt-2 border-t border-zinc-800/60">
+                          {selectedAnalysis.analysis.functions?.length > 0 && (
+                            <div>
+                              <span className="text-[10px] text-zinc-500 block mb-1">
+                                Defined Functions:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedAnalysis.analysis.functions.map((fn) => (
+                                  <span
+                                    key={fn.name}
+                                    className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-300 border border-emerald-500/20"
+                                  >
+                                    {fn.name}() {fn.startLine ? `(L${fn.startLine})` : ""}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedAnalysis.analysis.components?.length > 0 && (
+                            <div>
+                              <span className="text-[10px] text-zinc-500 block mb-1">
+                                React Components:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedAnalysis.analysis.components.map((comp) => (
+                                  <span
+                                    key={comp.name}
+                                    className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300 border border-amber-500/20"
+                                  >
+                                    &lt;{comp.name} /&gt;
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedAnalysis.analysis.classes?.length > 0 && (
+                            <div>
+                              <span className="text-[10px] text-zinc-500 block mb-1">
+                                Defined Classes:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedAnalysis.analysis.classes.map((cls) => (
+                                  <span
+                                    key={cls.name}
+                                    className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[10px] text-purple-300 border border-purple-500/20"
+                                  >
+                                    class {cls.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : selectedAnalysis?.status === "unsupported" ? (
                     <Badge variant="mono" className="gap-1 font-mono text-[11px] text-zinc-400">
                       <Info className="h-3 w-3 text-zinc-500" />
                       <span>AST: Unsupported ({selectedFile.language || "Format"})</span>
-                    </Badge>
-                  ) : selectedAnalysis?.status === "failed" ? (
-                    <Badge variant="rose" className="gap-1 font-mono text-[11px]">
-                      <AlertCircle className="h-3 w-3" />
-                      <span>AST: Failed Parse</span>
                     </Badge>
                   ) : (
                     <Badge variant="mono" className="gap-1 font-mono text-[11px] text-zinc-500">
@@ -556,23 +589,11 @@ export function FileTreeExplorer({
                     {selectedFile.extension || "N/A"}
                   </p>
                 </div>
-
-                <div>
-                  <label className="text-[11px] text-zinc-500">Tree Depth</label>
-                  <p className="text-zinc-200 mt-0.5">Level {selectedFile.depth}</p>
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-zinc-500">Parent Path</label>
-                  <p className="text-zinc-200 truncate mt-0.5">
-                    {selectedFile.parent_path || "(Root)"}
-                  </p>
-                </div>
               </div>
             </div>
           ) : (
             <div className="py-12 text-center text-xs text-zinc-500 font-mono">
-              Select a file or directory from the tree to view its metadata.
+              Select a file or directory from the tree to view its specific metadata & source code.
             </div>
           )}
         </div>
@@ -580,10 +601,89 @@ export function FileTreeExplorer({
         <div className="mt-6 flex items-start gap-2 rounded bg-zinc-950 p-3 text-[11px] text-zinc-400 border border-zinc-800">
           <Info className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
           <span>
-            Dependency intelligence resolves internal import references, detects circular loops, and maps module interactions.
+            Select any file to inspect its exact AST symbol definitions, file dependency connections, and raw source code.
           </span>
         </div>
       </Card>
+
+      {/* Interactive Source Code Viewer Modal */}
+      {isViewerOpen && selectedFile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 sm:p-6">
+          <div className="w-full max-w-4xl max-h-[85vh] rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl flex flex-col overflow-hidden font-sans">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-3.5 bg-zinc-900/90">
+              <div className="flex items-center gap-2.5">
+                <Code2 className="h-5 w-5 text-emerald-400" />
+                <div>
+                  <h3 className="font-mono text-sm font-semibold text-zinc-100">
+                    {selectedFile.name}
+                  </h3>
+                  <p className="text-[11px] font-mono text-zinc-500">{selectedFile.path}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {sourceCode && (
+                  <Button
+                    onClick={handleCopySource}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs font-mono gap-1.5"
+                  >
+                    {isCopied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsViewerOpen(false)}
+                  className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content Body */}
+            <div className="flex-1 overflow-y-auto p-5 font-mono text-xs bg-zinc-950">
+              {isFetchingSource ? (
+                <div className="flex items-center justify-center py-16 gap-2 text-zinc-400">
+                  <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+                  <span>Fetching source code content...</span>
+                </div>
+              ) : sourceError ? (
+                <div className="flex items-center gap-2 p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                  <span>{sourceError}</span>
+                </div>
+              ) : sourceCode ? (
+                <pre className="text-zinc-200 leading-relaxed overflow-x-auto selection:bg-emerald-500/30">
+                  {sourceCode.split("\n").map((line, idx) => (
+                    <div key={idx} className="table-row">
+                      <span className="table-cell pr-4 text-right select-none text-zinc-600 font-mono text-[11px]">
+                        {idx + 1}
+                      </span>
+                      <span className="table-cell whitespace-pre">{line}</span>
+                    </div>
+                  ))}
+                </pre>
+              ) : (
+                <div className="text-center py-12 text-zinc-500">No source content available.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
