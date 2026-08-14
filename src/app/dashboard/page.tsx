@@ -150,9 +150,9 @@ export default async function DashboardPage() {
 
                     <Link
                       href={`/repositories/${repo.id}`}
-                      className="flex items-center gap-1 text-emerald-400 hover:underline font-medium font-mono"
+                      className="flex items-center gap-1 text-emerald-400 hover:underline font-medium font-mono text-xs"
                     >
-                      <span>View Repository</span>
+                      <span>{status === "connected" ? "Open & Ingest" : "View Intelligence"}</span>
                       <ArrowUpRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
