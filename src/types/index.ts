@@ -496,3 +496,41 @@ export interface ChangeImpactResult {
     fanOut: number;
   };
 }
+
+/**
+ * Feature 10: Codebase Search & Symbol Navigation Domain Types
+ */
+export interface CodebaseSearchFilters {
+  symbolKind?: SymbolKind | "all";
+  exportedOnly?: boolean;
+  minUsages?: number;
+}
+
+export interface SearchMatchFile {
+  id: string;
+  path: string;
+  name: string;
+  language: string | null;
+  size: number;
+  functionsCount: number;
+  componentsCount: number;
+  exportedSymbolsCount: number;
+  fanIn: number;
+}
+
+export interface SearchMatchSymbol {
+  id: string;
+  symbol_name: string;
+  symbol_kind: SymbolKind;
+  defining_path: string;
+  is_exported: boolean;
+  reference_count: number;
+  start_line: number | null;
+}
+
+export interface CodebaseSearchResult {
+  query: string;
+  totalMatches: number;
+  matchingFiles: SearchMatchFile[];
+  matchingSymbols: SearchMatchSymbol[];
+}

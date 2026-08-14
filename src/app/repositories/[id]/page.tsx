@@ -19,6 +19,7 @@ import { SymbolResolutionButton } from "@/components/repositories/symbol-resolut
 import { ArchitectureScoreButton } from "@/components/repositories/architecture-score-button";
 import { SymbolIntelligenceCard } from "@/components/repositories/symbol-intelligence-card";
 import { DependencyMetricsCard } from "@/components/repositories/dependency-metrics-card";
+import { RepositorySearchButton } from "@/components/repositories/repository-search-button";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { CodebaseVisualizer } from "@/components/shared/codebase-visualizer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -174,7 +175,9 @@ export default async function RepositoryDetailsPage({
             )}
           </div>
 
-          <div className="flex items-center gap-3 self-end md:self-auto">
+          <div className="flex items-center gap-3 self-end md:self-auto flex-wrap">
+            <RepositorySearchButton repositoryId={repository.id} />
+
             {repository.url && (
               <a
                 href={repository.url}

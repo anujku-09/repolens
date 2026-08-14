@@ -381,7 +381,7 @@ export function CodebaseVisualizer({
       </div>
 
       {/* Main Graph Canvas & Inspector Layout */}
-      <div className={`grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-hidden ${isFullscreen ? "h-[calc(100vh-57px)]" : "min-h-[540px]"}`}>
+      <div className={`grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-hidden ${isFullscreen ? "h-[calc(100vh-57px)]" : "min-h-135"}`}>
         {/* Left Interactive SVG Canvas */}
         <div
           ref={containerRef}
@@ -395,7 +395,7 @@ export function CodebaseVisualizer({
         >
           {/* Canvas Search & Mode Controls Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2 z-20 pointer-events-auto">
-            <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <div className="relative flex-1 min-w-45 max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
               <input
                 type="text"
@@ -748,7 +748,7 @@ export function CodebaseVisualizer({
                 {selectedNode.imports.length === 0 ? (
                   <p className="text-[11px] text-zinc-600 mt-1 italic">No internal imports</p>
                 ) : (
-                  <div className="mt-1 max-h-[120px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  <div className="mt-1 max-h-30 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                     {selectedNode.imports.map((impPath) => (
                       <div
                         key={impPath}

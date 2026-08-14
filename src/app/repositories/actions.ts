@@ -9,7 +9,8 @@ import { buildRepositoryDependencyGraph } from "@/lib/analysis/dependency/build-
 import { buildRepositorySymbols } from "@/lib/analysis/symbols/build-symbols";
 import { buildRepositoryArchitectureScore } from "@/lib/analysis/architecture/score-architecture";
 import { analyzeFileImpact } from "@/lib/analysis/impact/analyze-impact";
-import { GitHubRepo, CreateRepositoryInput } from "@/types";
+import { searchCodebase } from "@/lib/search/codebase-search";
+import { GitHubRepo, CreateRepositoryInput, CodebaseSearchFilters } from "@/types";
 
 /**
  * Server Action: Connect a GitHub Repository to RepoLens.
@@ -191,4 +192,18 @@ export async function analyzeFileImpactAction(repositoryId: string, fileId: stri
     return { success: false, error: "Missing repository ID or file ID." };
   }
   return await analyzeFileImpact(repositoryId, fileId);
+}
+
+/**
+ * Server Action: AST-Aware Codebase & Symbol Search (Feature 10).
+ */
+export async function searchCodebaseAction(
+  repositoryId: string,
+  query: string,
+  filters?: CodebaseSearchFilters
+) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+  return await searchCodebase(repositoryId, query, filters);
 }
