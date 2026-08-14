@@ -178,7 +178,7 @@ export default async function RepositoryDetailsPage({
             )}
           </div>
 
-          <div className="flex items-center gap-3 self-end md:self-auto flex-wrap">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap self-start md:self-auto">
             <RepositorySearchButton repositoryId={repository.id} />
 
             {repository.url && (
@@ -186,7 +186,7 @@ export default async function RepositoryDetailsPage({
                 href={repository.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300 border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 px-3 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-zinc-300 border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 h-9 px-3 rounded-lg transition-colors shadow-sm shrink-0 cursor-pointer"
               >
                 <span>GitHub</span>
                 <ExternalLink className="h-3.5 w-3.5" />

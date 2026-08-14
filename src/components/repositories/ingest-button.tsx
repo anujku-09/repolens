@@ -38,11 +38,11 @@ export function IngestButton({
   const loading = isPending || isIndexing;
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="inline-flex flex-col items-end gap-1 shrink-0">
       <Button
         onClick={handleIngest}
         disabled={loading}
-        className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5"
+        className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs h-9 px-3.5 shadow-md gap-1.5 font-mono cursor-pointer shrink-0"
       >
         {loading ? (
           <>

@@ -18,7 +18,7 @@ export function RepositorySearchButton({ repositoryId }: RepositorySearchButtonP
         onClick={() => setIsOpen(true)}
         variant="outline"
         size="sm"
-        className="bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border-zinc-700 font-mono text-xs h-9 px-3 gap-2 shadow-sm cursor-pointer"
+        className="bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border-zinc-700 font-mono text-xs h-9 px-3 gap-2 shadow-sm cursor-pointer shrink-0"
       >
         <Search className="h-3.5 w-3.5 text-amber-400" />
         <span>Search Codebase & AST...</span>
