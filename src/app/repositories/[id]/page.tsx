@@ -24,6 +24,9 @@ import { GuidedOnboardingTour } from "@/components/repositories/guided-onboardin
 import { RefactoringAdvisorCard } from "@/components/repositories/refactoring-advisor-card";
 import { RepositorySearchButton } from "@/components/repositories/repository-search-button";
 import { RepositoryDashboardTabs } from "@/components/repositories/repository-dashboard-tabs";
+import { PipelineStepperBar } from "@/components/repositories/pipeline-stepper-bar";
+import { ArchitectureHealthCard } from "@/components/repositories/architecture-health-card";
+import { IngestionStatsGrid } from "@/components/repositories/ingestion-stats-grid";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { CodebaseVisualizer } from "@/components/shared/codebase-visualizer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -206,346 +209,38 @@ export default async function RepositoryDetailsPage({
         <RepositoryDashboardTabs
           overviewContent={
             <>
-              {/* Pipeline Control Grid (Source, AST, Graph, Symbols & Architecture Score) */}
+              {/* Sleek Codebase Intelligence Pipeline Stepper Bar */}
               {isIndexed && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 items-stretch mb-8">
-                  {/* Source Ingestion Card */}
-                  <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <FileCode className="h-4 w-4 text-emerald-400" />
-                          <h3 className="text-xs font-semibold text-zinc-100">1. Source</h3>
-                        </div>
-                        {isSourceIngested ? (
-                          <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
-                            Indexed ({sourceCount})
-                          </Badge>
-                        ) : (
-                          <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                        Fetch raw source code contents from GitHub.
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
-                      <SourceIngestButton
-                        repositoryId={repository.id}
-                        isIngested={isSourceIngested}
-                        disabled={!isIndexed}
-                      />
-                    </div>
-                  </Card>
-
-                  {/* AST Structural Analysis Card */}
-                  <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Cpu className="h-4 w-4 text-sky-400" />
-                          <h3 className="text-xs font-semibold text-zinc-100">2. AST Analysis</h3>
-                        </div>
-                        {isAstAnalyzed ? (
-                          <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
-                            Analyzed ({astSummary?.analyzedFiles})
-                          </Badge>
-                        ) : (
-                          <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                        Extract imports, exports, functions & classes.
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
-                      <AstAnalyzeButton
-                        repositoryId={repository.id}
-                        isAnalyzed={isAstAnalyzed}
-                        disabled={!isSourceIngested}
-                      />
-                    </div>
-                  </Card>
-
-                  {/* Dependency Graph Builder Card */}
-                  <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <GitFork className="h-4 w-4 text-purple-400" />
-                          <h3 className="text-xs font-semibold text-zinc-100">3. Graph</h3>
-                        </div>
-                        {isGraphBuilt ? (
-                          <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
-                            Resolved ({serializedGraph.edges.length})
-                          </Badge>
-                        ) : (
-                          <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                        Resolve imports & detect circular cycles.
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
-                      <DependencyGraphButton
-                        repositoryId={repository.id}
-                        isGraphBuilt={isGraphBuilt}
-                        disabled={!isAstAnalyzed}
-                      />
-                    </div>
-                  </Card>
-
-                  {/* Symbol Resolution Card (Feature 8A) */}
-                  <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Code2 className="h-4 w-4 text-amber-400" />
-                          <h3 className="text-xs font-semibold text-zinc-100">4. Symbols</h3>
-                        </div>
-                        {isSymbolsResolved ? (
-                          <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
-                            Mapped ({symbolSummary?.totalDefinedSymbols})
-                          </Badge>
-                        ) : (
-                          <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                        Map definitions & usage across files.
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
-                      <SymbolResolutionButton
-                        repositoryId={repository.id}
-                        isSymbolsResolved={isSymbolsResolved}
-                        disabled={!isGraphBuilt}
-                      />
-                    </div>
-                  </Card>
-
-                  {/* Architecture Score Card (Feature 8B) */}
-                  <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                          <h3 className="text-xs font-semibold text-zinc-100">5. Health Score</h3>
-                        </div>
-                        {isScoreComputed && archScore ? (
-                          <Badge variant="emerald" className="font-mono text-[9px] px-1.5">
-                            Score: {archScore.health_score}/100
-                          </Badge>
-                        ) : (
-                          <Badge variant="mono" className="font-mono text-[9px] text-zinc-500">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                        Evaluate coupling, modularity & layer violations.
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-zinc-800/80">
-                      <ArchitectureScoreButton
-                        repositoryId={repository.id}
-                        isScoreComputed={isScoreComputed}
-                        disabled={!isGraphBuilt}
-                      />
-                    </div>
-                  </Card>
-                </div>
+                <PipelineStepperBar
+                  repositoryId={repository.id}
+                  isIndexed={isIndexed}
+                  isSourceIngested={isSourceIngested}
+                  sourceCount={sourceCount}
+                  isAstAnalyzed={isAstAnalyzed}
+                  analyzedFilesCount={astSummary?.analyzedFiles}
+                  isGraphBuilt={isGraphBuilt}
+                  edgesCount={serializedGraph.edges.length}
+                  isSymbolsResolved={isSymbolsResolved}
+                  totalDefinedSymbols={symbolSummary?.totalDefinedSymbols}
+                  isScoreComputed={isScoreComputed}
+                  healthScore={archScore?.health_score}
+                />
               )}
 
-              {/* Real Ingestion Statistics Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <Card className="border-zinc-800 bg-zinc-900/40 p-5">
-                  <CardHeader className="p-0">
-                    <CardDescription className="text-zinc-400 flex items-center gap-1.5 text-xs">
-                      <Files className="h-4 w-4 text-emerald-400" />
-                      <span>Total Files</span>
-                    </CardDescription>
-                    <CardTitle className="text-2xl font-mono text-zinc-100 mt-1">
-                      {totalFiles.toLocaleString()}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
+              {/* Interactive Ingestion Statistics Grid */}
+              <IngestionStatsGrid
+                totalFiles={totalFiles}
+                totalDirectories={totalDirectories}
+                formattedCodeSize={formatBytes(totalCodeSize)}
+                defaultBranch={repository.default_branch || "main"}
+                githubRepoUrl={repository.url || undefined}
+              />
 
-                <Card className="border-zinc-800 bg-zinc-900/40 p-5">
-                  <CardHeader className="p-0">
-                    <CardDescription className="text-zinc-400 flex items-center gap-1.5 text-xs">
-                      <FolderTree className="h-4 w-4 text-sky-400" />
-                      <span>Directories</span>
-                    </CardDescription>
-                    <CardTitle className="text-2xl font-mono text-zinc-100 mt-1">
-                      {totalDirectories.toLocaleString()}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-
-                <Card className="border-zinc-800 bg-zinc-900/40 p-5">
-                  <CardHeader className="p-0">
-                    <CardDescription className="text-zinc-400 flex items-center gap-1.5 text-xs">
-                      <HardDrive className="h-4 w-4 text-amber-400" />
-                      <span>Total Code Size</span>
-                    </CardDescription>
-                    <CardTitle className="text-2xl font-mono text-zinc-100 mt-1">
-                      {formatBytes(totalCodeSize)}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-
-                <Card className="border-zinc-800 bg-zinc-900/40 p-5">
-                  <CardHeader className="p-0">
-                    <CardDescription className="text-zinc-400 flex items-center gap-1.5 text-xs">
-                      <GitBranch className="h-4 w-4 text-purple-400" />
-                      <span>Default Branch</span>
-                    </CardDescription>
-                    <CardTitle className="text-xl font-mono text-zinc-100 mt-1 truncate">
-                      {repository.default_branch || "main"}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-              </div>
-
-              {/* Architecture Health Dashboard Card */}
-              {isScoreComputed && archScore ? (
-                <Card className="border-emerald-500/30 bg-emerald-500/5 p-5 mb-8">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-emerald-500/20 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono font-bold text-xl shadow-inner">
-                        {archScore.health_score}
-                      </div>
-                      <div>
-                        <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
-                          <span>Architecture Quality & Health Dashboard</span>
-                          <Badge
-                            variant={
-                              archScore.health_score >= 80
-                                ? "emerald"
-                                : archScore.health_score >= 60
-                                ? "amber"
-                                : "rose"
-                            }
-                            className="font-mono text-xs"
-                          >
-                            {archScore.health_score >= 80
-                              ? "Excellent Modularity"
-                              : archScore.health_score >= 60
-                              ? "Moderate Quality"
-                              : "High Risk Architecture"}
-                          </Badge>
-                        </h3>
-                        <p className="text-xs text-zinc-400 mt-0.5 font-mono">
-                          Evaluated across {archScore.total_files_evaluated} code files with Martin&apos;s Instability Index ({archScore.instability_index || 0.5}).
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sub-Scores Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-6">
-                    <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
-                      <span className="text-[11px] text-zinc-500 uppercase">Coupling Score</span>
-                      <p className="text-xl font-bold text-sky-400 mt-0.5">
-                        {archScore.coupling_score}/100
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
-                      <span className="text-[11px] text-zinc-500 uppercase">Cohesion Score</span>
-                      <p className="text-xl font-bold text-emerald-400 mt-0.5">
-                        {archScore.cohesion_score}/100
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
-                      <span className="text-[11px] text-zinc-500 uppercase">Modularity Score</span>
-                      <p className="text-xl font-bold text-purple-400 mt-0.5">
-                        {archScore.modularity_score}/100
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-zinc-950 p-3.5 border border-zinc-800">
-                      <span className="text-[11px] text-zinc-500 uppercase">Avg Instability (I)</span>
-                      <p className="text-xl font-bold text-amber-400 mt-0.5">
-                        {archScore.instability_index || 0.5}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Layer Violations Warning List */}
-                  {archScore.analysis_payload?.layerViolations?.length > 0 && (
-                    <div className="pt-3 border-t border-emerald-500/20 mb-4">
-                      <label className="text-[11px] font-mono text-amber-300 uppercase tracking-wider flex items-center gap-1.5 mb-2 font-semibold">
-                        <AlertTriangle className="h-4 w-4 text-amber-400" />
-                        <span>Layer Violations Detected ({archScore.layer_violations_count})</span>
-                      </label>
-                      <div className="space-y-1.5 font-mono text-xs">
-                        {archScore.analysis_payload.layerViolations.map((v, idx) => (
-                          <div
-                            key={idx}
-                            className="rounded bg-zinc-950 p-2.5 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
-                          >
-                            <div className="space-y-0.5">
-                              <span className="font-bold text-amber-400 text-[11px]">{v.violationType}</span>
-                              <p className="text-[11px] text-zinc-300">
-                                <code className="text-sky-300">{v.sourcePath}</code> &rarr;{" "}
-                                <code className="text-rose-300">{v.targetPath}</code>
-                              </p>
-                            </div>
-                            <span className="text-[10px] text-zinc-500 italic max-w-xs">{v.reason}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Orphan Files List */}
-                  {archScore.analysis_payload?.orphanFiles?.length > 0 && (
-                    <div className="pt-3 border-t border-emerald-500/20">
-                      <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                        <FileX className="h-3.5 w-3.5 text-purple-400" />
-                        <span>Orphan / Unreachable Code Files ({archScore.orphan_files_count})</span>
-                      </label>
-                      <div className="flex flex-wrap gap-2 text-xs font-mono">
-                        {archScore.analysis_payload.orphanFiles.slice(0, 8).map((orphan) => (
-                          <div
-                            key={orphan.path}
-                            className="inline-flex items-center gap-1.5 rounded bg-zinc-950 px-2.5 py-1 text-purple-300 border border-zinc-800"
-                          >
-                            <span>{orphan.path}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              ) : (
-                <Card className="border-zinc-800/80 bg-zinc-900/30 p-5 mb-8 text-center font-mono">
-                  <div className="flex flex-col items-center justify-center py-4">
-                    <ShieldCheck className="h-8 w-8 text-zinc-600 mb-2" />
-                    <h3 className="text-sm font-semibold text-zinc-300">Architecture Score Pending</h3>
-                    <p className="text-xs text-zinc-500 max-w-md mt-1">
-                      Click &quot;Re-calculate Score&quot; in card 5 of the Pipeline Control grid above to calculate coupling, cohesion, modularity, and layer violations.
-                    </p>
-                  </div>
-                </Card>
-              )}
+              {/* Interactive Architecture Health Dashboard Card */}
+              <ArchitectureHealthCard
+                archScore={archScore}
+                isScoreComputed={isScoreComputed}
+              />
 
               {/* 5-Minute Guided Repository Onboarding Tour */}
               <GuidedOnboardingTour
