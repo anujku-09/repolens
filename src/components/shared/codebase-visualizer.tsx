@@ -565,6 +565,8 @@ export function CodebaseVisualizer({
                 const norm = Math.sqrt(dx * dx + dy * dy) || 1;
                 const controlX = midX - (dy / norm) * 20;
                 const controlY = midY + (dx / norm) * 20;
+                const controlXFormatted = Number(controlX.toFixed(2));
+                const controlYFormatted = Number(controlY.toFixed(2));
 
                 const strokeColor = isSourceSelected
                   ? "#38bdf8"
@@ -581,7 +583,7 @@ export function CodebaseVisualizer({
                 return (
                   <path
                     key={edge.id}
-                    d={`M ${src.x} ${src.y} Q ${controlX} ${controlY} ${tgt.x} ${tgt.y}`}
+                    d={`M ${src.x.toFixed(2)} ${src.y.toFixed(2)} Q ${controlXFormatted} ${controlYFormatted} ${tgt.x.toFixed(2)} ${tgt.y.toFixed(2)}`}
                     fill="none"
                     stroke={strokeColor}
                     strokeWidth={isConnectedToSelected ? 2.5 : 1}
@@ -633,7 +635,7 @@ export function CodebaseVisualizer({
                 return (
                   <g
                     key={node.id}
-                    transform={`translate(${node.x}, ${node.y})`}
+                    transform={`translate(${node.x.toFixed(2)}, ${node.y.toFixed(2)})`}
                     opacity={nodeOpacity}
                     onClick={(e) => {
                       e.stopPropagation();
