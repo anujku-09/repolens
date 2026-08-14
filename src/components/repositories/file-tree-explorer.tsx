@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { RepositoryFile, RepositoryFileAnalysis } from "@/types";
+import { RepositoryFile, RepositoryFileAnalysis, SerializedGraphData } from "@/types";
 import { isAnalyzableSourceFile } from "@/lib/ingestion/source-policy";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,12 +24,16 @@ import {
   XCircle,
   Cpu,
   AlertCircle,
+  GitFork,
+  ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 
 interface FileTreeExplorerProps {
   files: RepositoryFile[];
   ingestedFileIds?: Set<string>;
   analysisMap?: Map<string, RepositoryFileAnalysis>;
+  graphData?: SerializedGraphData | null;
 }
 
 interface TreeNode {
@@ -87,6 +91,7 @@ export function FileTreeExplorer({
   files,
   ingestedFileIds = new Set(),
   analysisMap = new Map(),
+  graphData = null,
 }: FileTreeExplorerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set([""]));
@@ -134,6 +139,18 @@ export function FileTreeExplorer({
         (f.extension && f.extension.toLowerCase().includes(q))
     );
   }, [files, searchQuery]);
+
+  // Fast map lookup for selected file node dependencies in graph
+  const graphNodeMap = useMemo(() => {
+    const map = new Map<string, NonNullable<SerializedGraphData["nodes"]>[0]>();
+    if (graphData && graphData.nodes) {
+      graphData.nodes.forEach((n) => {
+        map.set(n.id, n);
+        map.set(n.path, n);
+      });
+    }
+    return map;
+  }, [graphData]);
 
   const toggleExpand = (path: string) => {
     setExpandedPaths((prev) => {
@@ -255,6 +272,9 @@ export function FileTreeExplorer({
   }
 
   const selectedAnalysis = selectedFile ? analysisMap.get(selectedFile.id) : undefined;
+  const selectedGraphNode = selectedFile
+    ? graphNodeMap.get(selectedFile.id) || graphNodeMap.get(selectedFile.path)
+    : undefined;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -364,6 +384,69 @@ export function FileTreeExplorer({
                   {selectedFile.path}
                 </p>
               </div>
+
+              {/* Dependency Intelligence Breakdown (Feature 7) */}
+              {selectedGraphNode && (
+                <div>
+                  <label className="text-[11px] text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+                    <GitFork className="h-3 w-3 text-purple-400" />
+                    <span>Dependency Graph Intelligence</span>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-2 text-center mt-1">
+                    <div className="rounded bg-zinc-950 p-2 border border-zinc-800">
+                      <span className="text-[10px] text-zinc-500 uppercase">Imports (Out)</span>
+                      <p className="text-sm font-bold text-sky-400 mt-0.5">
+                        {selectedGraphNode.outDegree}
+                      </p>
+                    </div>
+                    <div className="rounded bg-zinc-950 p-2 border border-zinc-800">
+                      <span className="text-[10px] text-zinc-500 uppercase">Imported By (In)</span>
+                      <p className="text-sm font-bold text-purple-400 mt-0.5">
+                        {selectedGraphNode.inDegree}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedGraphNode.imports.length > 0 && (
+                    <div className="mt-2">
+                      <span className="text-[10px] text-zinc-500 flex items-center gap-1">
+                        <ArrowRight className="h-3 w-3 text-sky-400" />
+                        <span>Dependencies ({selectedGraphNode.imports.length}):</span>
+                      </span>
+                      <div className="mt-1 max-h-[80px] overflow-y-auto space-y-1 custom-scrollbar">
+                        {selectedGraphNode.imports.map((p) => (
+                          <div
+                            key={p}
+                            className="truncate rounded bg-zinc-950 px-2 py-0.5 text-[10px] text-sky-300 border border-zinc-800/60"
+                          >
+                            {p}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedGraphNode.importedBy.length > 0 && (
+                    <div className="mt-2">
+                      <span className="text-[10px] text-zinc-500 flex items-center gap-1">
+                        <ArrowLeft className="h-3 w-3 text-purple-400" />
+                        <span>Imported By ({selectedGraphNode.importedBy.length}):</span>
+                      </span>
+                      <div className="mt-1 max-h-[80px] overflow-y-auto space-y-1 custom-scrollbar">
+                        {selectedGraphNode.importedBy.map((p) => (
+                          <div
+                            key={p}
+                            className="truncate rounded bg-zinc-950 px-2 py-0.5 text-[10px] text-purple-300 border border-zinc-800/60"
+                          >
+                            {p}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Source Content Index Status */}
               <div>
@@ -495,9 +578,9 @@ export function FileTreeExplorer({
         </div>
 
         <div className="mt-6 flex items-start gap-2 rounded bg-zinc-950 p-3 text-[11px] text-zinc-400 border border-zinc-800">
-          <Info className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+          <Info className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
           <span>
-            AST analysis extracts structural facts (imports, exports, functions, classes, components) using the TypeScript Compiler API. Dependency graphs will be enabled in Feature 7.
+            Dependency intelligence resolves internal import references, detects circular loops, and maps module interactions.
           </span>
         </div>
       </Card>

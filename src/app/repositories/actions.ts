@@ -5,6 +5,7 @@ import { createRepository, getRepositories, deleteRepository } from "@/lib/repos
 import { ingestRepositoryTree } from "@/lib/repositories/files";
 import { ingestRepositorySource } from "@/lib/ingestion/source";
 import { analyzeRepository } from "@/lib/analysis/analyze-repository";
+import { buildRepositoryDependencyGraph } from "@/lib/analysis/dependency/build-graph";
 import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
@@ -100,6 +101,23 @@ export async function analyzeRepositoryAction(repositoryId: string) {
   }
 
   const result = await analyzeRepository(repositoryId);
+
+  revalidatePath("/repositories");
+  revalidatePath(`/repositories/${repositoryId}`);
+  revalidatePath("/dashboard");
+
+  return result;
+}
+
+/**
+ * Server Action: Build Repository Dependency Graph & Import Resolution.
+ */
+export async function buildDependencyGraphAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+
+  const result = await buildRepositoryDependencyGraph(repositoryId);
 
   revalidatePath("/repositories");
   revalidatePath(`/repositories/${repositoryId}`);

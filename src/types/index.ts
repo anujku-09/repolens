@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion, Source Code Ingestion & AST Structural Analysis.
+ * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion, Source Code Ingestion, AST Analysis & Dependency Graph.
  */
 
 export interface Profile {
@@ -257,4 +257,66 @@ export interface RepositoryAnalysisSummary {
   variables: number;
   components: number;
   unsupportedLanguages: string[];
+}
+
+/**
+ * Dependency Graph & Import Resolution Domain Types (Feature 7)
+ */
+export type DependencyType = "internal" | "external" | "unresolved";
+
+export interface RepositoryDependency {
+  id: string;
+  repository_id: string;
+  user_id: string;
+  source_file_id: string;
+  target_file_id: string;
+  import_path: string;
+  dependency_type: DependencyType;
+  created_at: string;
+}
+
+export interface RepositoryDependencyInsert {
+  repository_id: string;
+  user_id: string;
+  source_file_id: string;
+  target_file_id: string;
+  import_path: string;
+  dependency_type: DependencyType;
+}
+
+export interface DependencyGraphSummary {
+  filesProcessed: number;
+  internalDependencies: number;
+  externalDependencies: number;
+  unresolvedDependencies: number;
+  circularDependencyCount: number;
+  mostImportedFiles: { path: string; count: number }[];
+  mostDependentFiles: { path: string; count: number }[];
+  externalPackages: { name: string; count: number }[];
+  circularCycles: string[][];
+}
+
+export interface GraphNode {
+  id: string;
+  path: string;
+  name: string;
+  language: string | null;
+  size: number | null;
+  inDegree: number;
+  outDegree: number;
+  imports: string[];   // paths of files this node imports
+  importedBy: string[];// paths of files that import this node
+}
+
+export interface GraphEdge {
+  id: string;
+  source: string; // source file id or path
+  target: string; // target file id or path
+  importPath: string;
+}
+
+export interface SerializedGraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  summary: DependencyGraphSummary | null;
 }

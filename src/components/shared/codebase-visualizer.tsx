@@ -1,147 +1,112 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { SerializedGraphData, GraphNode } from "@/types";
+import { Badge } from "@/components/ui/badge";
 import {
-  Folder,
   FileCode,
   FileJson,
-  ChevronRight,
-  ChevronDown,
-  CheckCircle2,
-  GitBranch,
   Search,
-  Activity,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  GitBranch,
   Layers,
-  Cpu,
-  ShieldCheck,
+  ArrowRight,
+  ArrowLeft,
+  Share2,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
-interface FileItem {
-  name: string;
-  type: "folder" | "file";
-  path: string;
-  size?: string;
-  status?: "analyzed" | "indexing" | "ready";
-  children?: FileItem[];
-  extension?: string;
+interface CodebaseVisualizerProps {
+  graphData?: SerializedGraphData | null;
+  repositoryFullName?: string;
+  defaultBranch?: string;
 }
 
-const mockTree: FileItem[] = [
-  {
-    name: "src",
-    type: "folder",
-    path: "/src",
-    children: [
-      {
-        name: "app",
-        type: "folder",
-        path: "/src/app",
-        children: [
-          { name: "layout.tsx", type: "file", path: "/src/app/layout.tsx", size: "1.2 KB", extension: "tsx", status: "analyzed" },
-          { name: "page.tsx", type: "file", path: "/src/app/page.tsx", size: "3.4 KB", extension: "tsx", status: "analyzed" },
-          { name: "globals.css", type: "file", path: "/src/app/globals.css", size: "850 B", extension: "css", status: "analyzed" },
-        ],
-      },
-      {
-        name: "components",
-        type: "folder",
-        path: "/src/components",
-        children: [
-          { name: "codebase-visualizer.tsx", type: "file", path: "/src/components/codebase-visualizer.tsx", size: "4.8 KB", extension: "tsx", status: "analyzed" },
-          { name: "navbar.tsx", type: "file", path: "/src/components/navbar.tsx", size: "2.1 KB", extension: "tsx", status: "analyzed" },
-        ],
-      },
-      {
-        name: "lib",
-        type: "folder",
-        path: "/src/lib",
-        children: [
-          { name: "github.ts", type: "file", path: "/src/lib/github.ts", size: "1.8 KB", extension: "ts", status: "analyzed" },
-          { name: "supabase.ts", type: "file", path: "/src/lib/supabase.ts", size: "1.1 KB", extension: "ts", status: "analyzed" },
-        ],
-      },
-    ],
-  },
-  { name: "next.config.ts", type: "file", path: "/next.config.ts", size: "420 B", extension: "ts", status: "analyzed" },
-  { name: "package.json", type: "file", path: "/package.json", size: "890 B", extension: "json", status: "analyzed" },
-  { name: "tsconfig.json", type: "file", path: "/tsconfig.json", size: "650 B", extension: "json", status: "analyzed" },
-];
+export function CodebaseVisualizer({
+  graphData,
+  repositoryFullName = "repository",
+  defaultBranch = "main",
+}: CodebaseVisualizerProps) {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [zoomLevel, setZoomLevel] = useState(1);
 
-export function CodebaseVisualizer() {
-  const [selectedFile, setSelectedFile] = useState<string>("/src/app/page.tsx");
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
-    "/src": true,
-    "/src/app": true,
-    "/src/components": true,
-    "/src/lib": true,
-  });
+  const nodes = graphData?.nodes || [];
+  const edges = graphData?.edges || [];
+  const summary = graphData?.summary || null;
 
-  const toggleFolder = (path: string) => {
-    setExpandedFolders((prev) => ({ ...prev, [path]: !prev[path] }));
-  };
+  // Filter nodes based on search query
+  const filteredNodes = useMemo(() => {
+    if (!searchQuery.trim()) return nodes;
+    const q = searchQuery.toLowerCase().trim();
+    return nodes.filter(
+      (n) =>
+        n.name.toLowerCase().includes(q) ||
+        n.path.toLowerCase().includes(q) ||
+        (n.language && n.language.toLowerCase().includes(q))
+    );
+  }, [nodes, searchQuery]);
 
-  const renderTree = (items: FileItem[], depth = 0) => {
-    return items.map((item) => {
-      const isExpanded = expandedFolders[item.path];
-      const isSelected = selectedFile === item.path;
+  // Find currently selected node object
+  const selectedNode = useMemo(() => {
+    if (!selectedNodeId) return nodes[0] || null;
+    return nodes.find((n) => n.id === selectedNodeId || n.path === selectedNodeId) || nodes[0] || null;
+  }, [nodes, selectedNodeId]);
 
-      if (item.type === "folder") {
-        return (
-          <div key={item.path} className="select-none">
-            <button
-              onClick={() => toggleFolder(item.path)}
-              className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800/60 transition-colors"
-              style={{ paddingLeft: `${depth * 12 + 8}px` }}
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
-              )}
-              <Folder className="h-3.5 w-3.5 text-emerald-400 fill-emerald-400/10" />
-              <span className="font-mono text-zinc-200">{item.name}</span>
-            </button>
-            {isExpanded && item.children && (
-              <div>{renderTree(item.children, depth + 1)}</div>
-            )}
-          </div>
-        );
-      }
+  // Compute connected nodes for highlighting
+  const connectedPaths = useMemo(() => {
+    if (!selectedNode) return new Set<string>();
+    const set = new Set<string>();
+    set.add(selectedNode.path);
+    selectedNode.imports.forEach((p) => set.add(p));
+    selectedNode.importedBy.forEach((p) => set.add(p));
+    return set;
+  }, [selectedNode]);
 
-      return (
-        <button
-          key={item.path}
-          onClick={() => setSelectedFile(item.path)}
-          className={`flex w-full items-center justify-between rounded px-2 py-1 text-xs transition-colors ${
-            isSelected
-              ? "bg-emerald-500/15 text-emerald-300 font-medium border-l-2 border-emerald-400"
-              : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
-          }`}
-          style={{ paddingLeft: `${depth * 12 + 20}px` }}
-        >
-          <div className="flex items-center gap-1.5 truncate">
-            {item.extension === "json" ? (
-              <FileJson className="h-3.5 w-3.5 text-amber-400" />
-            ) : (
-              <FileCode className="h-3.5 w-3.5 text-sky-400" />
-            )}
-            <span className="font-mono truncate">{item.name}</span>
-          </div>
-          {item.size && (
-            <span className="font-mono text-[10px] text-zinc-600">
-              {item.size}
-            </span>
-          )}
-        </button>
-      );
+  // Calculate layout coordinates for SVG network graph nodes
+  const layoutNodes = useMemo(() => {
+    const list = filteredNodes.slice(0, 40); // Max 40 nodes rendered visually for performance
+    const count = list.length;
+    if (count === 0) return [];
+
+    const radius = Math.min(220 + count * 6, 320);
+    const centerX = 360;
+    const centerY = 240;
+
+    return list.map((node, i) => {
+      const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      return { ...node, x, y };
     });
-  };
+  }, [filteredNodes]);
+
+  const layoutMap = useMemo(() => {
+    const map = new Map<string, { x: number; y: number }>();
+    layoutNodes.forEach((n) => map.set(n.path, { x: n.x, y: n.y }));
+    return map;
+  }, [layoutNodes]);
+
+  if (nodes.length === 0) {
+    return (
+      <div className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-8 text-center font-mono">
+        <Share2 className="mx-auto h-10 w-10 text-purple-400 mb-3 opacity-80" />
+        <h3 className="text-base font-semibold text-zinc-200">No Dependency Graph Generated Yet</h3>
+        <p className="text-xs text-zinc-400 max-w-md mx-auto mt-1 font-sans">
+          Click <strong>&quot;Build Dependency Graph&quot;</strong> above to resolve import paths and generate your repository dependency network map.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden font-sans">
-      {/* Editor Top Control Bar */}
-      <div className="flex items-center justify-between border-b border-zinc-800/80 bg-zinc-900/90 px-4 py-3">
+      {/* Top Header Control Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-b border-zinc-800/80 bg-zinc-900/90 px-4 py-3 gap-3">
         <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
             <div className="h-3 w-3 rounded-full bg-rose-500/80" />
@@ -150,106 +115,277 @@ export function CodebaseVisualizer() {
           </div>
           <div className="h-4 w-px bg-zinc-800" />
           <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-            <GitBranch className="h-3.5 w-3.5 text-emerald-400" />
-            <span>main</span>
+            <GitBranch className="h-3.5 w-3.5 text-purple-400" />
+            <span>{defaultBranch}</span>
             <span className="text-zinc-600">/</span>
-            <span className="text-zinc-200 font-semibold">repolens/repolens-core</span>
+            <span className="text-zinc-200 font-semibold">{repositoryFullName}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="emerald" className="gap-1 text-[11px] py-0.5">
-            <CheckCircle2 className="h-3 w-3" />
-            <span>Codebase Analyzed</span>
+          <Badge variant="emerald" className="gap-1 text-[11px] py-0.5 font-mono">
+            <CheckCircle2 className="h-3 w-3 text-purple-400" />
+            <span>Graph Resolved ({edges.length} edges)</span>
           </Badge>
-          <Badge variant="mono" className="hidden sm:inline-flex text-[11px]">
-            AST Indexing: 100%
-          </Badge>
+
+          {summary && summary.circularDependencyCount > 0 && (
+            <Badge variant="amber" className="gap-1 text-[11px] py-0.5 font-mono">
+              <AlertTriangle className="h-3 w-3" />
+              <span>{summary.circularDependencyCount} Cycles</span>
+            </Badge>
+          )}
         </div>
       </div>
 
-      {/* Main Workspace Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-12 min-h-[380px]">
-        {/* Left Sidebar: Repository File Tree */}
-        <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-zinc-800/80 bg-zinc-950 p-3 flex flex-col">
-          <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
-            <span>Repository Explorer</span>
-            <Search className="h-3.5 w-3.5 text-zinc-600" />
+      {/* Main Graph & Inspector Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[460px]">
+        {/* Left Interactive SVG Network Graph */}
+        <div className="lg:col-span-8 border-b lg:border-b-0 lg:border-r border-zinc-800/80 bg-zinc-950 p-4 relative flex flex-col justify-between overflow-hidden">
+          {/* Controls Bar */}
+          <div className="flex items-center justify-between gap-3 mb-3 z-10">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search file node by name..."
+                className="w-full rounded-md border border-zinc-800 bg-zinc-900/90 pl-8 pr-3 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-purple-500 focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-md p-1 font-mono text-xs text-zinc-400">
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 1.8))}
+                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
+                title="Zoom In"
+              >
+                <ZoomIn className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.6))}
+                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
+                title="Zoom Out"
+              >
+                <ZoomOut className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomLevel(1)}
+                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
+                title="Reset Zoom"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+              <span className="px-1 text-[11px] text-zinc-500">{(zoomLevel * 100).toFixed(0)}%</span>
+            </div>
           </div>
-          <div className="flex-1 space-y-0.5 overflow-y-auto">
-            {renderTree(mockTree)}
+
+          {/* SVG Graph Canvas */}
+          <div className="flex-1 min-h-[360px] flex items-center justify-center overflow-hidden relative">
+            <svg
+              viewBox="0 0 720 480"
+              className="w-full h-full max-h-[440px] transition-transform duration-200 ease-out cursor-grab"
+              style={{ transform: `scale(${zoomLevel})` }}
+            >
+              <defs>
+                <marker
+                  id="arrowhead"
+                  markerWidth="8"
+                  markerHeight="6"
+                  refX="14"
+                  refY="3"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 8 3, 0 6" fill="#a855f7" opacity="0.6" />
+                </marker>
+                <marker
+                  id="arrowhead-active"
+                  markerWidth="8"
+                  markerHeight="6"
+                  refX="14"
+                  refY="3"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
+                </marker>
+              </defs>
+
+              {/* Edge Lines */}
+              {edges.map((edge) => {
+                const src = layoutMap.get(edge.source);
+                const tgt = layoutMap.get(edge.target);
+                if (!src || !tgt) return null;
+
+                const isConnectedToSelected =
+                  selectedNode &&
+                  (edge.source === selectedNode.path || edge.target === selectedNode.path);
+
+                return (
+                  <line
+                    key={edge.id}
+                    x1={src.x}
+                    y1={src.y}
+                    x2={tgt.x}
+                    y2={tgt.y}
+                    stroke={isConnectedToSelected ? "#38bdf8" : "#3f3f46"}
+                    strokeWidth={isConnectedToSelected ? 2 : 1}
+                    strokeDasharray={isConnectedToSelected ? undefined : "3 3"}
+                    opacity={isConnectedToSelected ? 1 : 0.4}
+                    markerEnd={isConnectedToSelected ? "url(#arrowhead-active)" : "url(#arrowhead)"}
+                  />
+                );
+              })}
+
+              {/* Node Elements */}
+              {layoutNodes.map((node) => {
+                const isSelected = selectedNode?.path === node.path;
+                const isConnected = connectedPaths.has(node.path);
+
+                const nodeColor = node.path.endsWith(".tsx") || node.path.endsWith(".jsx")
+                  ? "#38bdf8"
+                  : node.path.endsWith(".ts") || node.path.endsWith(".js")
+                  ? "#10b981"
+                  : "#f59e0b";
+
+                return (
+                  <g
+                    key={node.id}
+                    transform={`translate(${node.x}, ${node.y})`}
+                    onClick={() => setSelectedNodeId(node.id)}
+                    className="cursor-pointer transition-transform duration-150 hover:scale-110"
+                  >
+                    <circle
+                      r={isSelected ? 16 : isConnected ? 12 : 9}
+                      fill={nodeColor}
+                      fillOpacity={isSelected ? 0.3 : isConnected ? 0.2 : 0.1}
+                      stroke={nodeColor}
+                      strokeWidth={isSelected ? 3 : isConnected ? 2 : 1}
+                    />
+                    <circle r={isSelected ? 6 : 4} fill={nodeColor} />
+
+                    <text
+                      y={isSelected ? 26 : 20}
+                      textAnchor="middle"
+                      fill={isSelected ? "#f4f4f5" : isConnected ? "#e4e4e7" : "#a1a1aa"}
+                      fontSize={isSelected ? "11" : "9"}
+                      fontFamily="monospace"
+                      fontWeight={isSelected ? "bold" : "normal"}
+                    >
+                      {node.name}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          <div className="pt-2 text-[11px] font-mono text-zinc-500 flex justify-between">
+            <span>Showing top {layoutNodes.length} file nodes in graph</span>
+            <span>Click any node to highlight dependencies</span>
           </div>
         </div>
 
-        {/* Center/Right Pane: Architecture Insights & Code Analysis Preview */}
-        <div className="md:col-span-8 bg-zinc-900/40 p-4 md:p-6 flex flex-col justify-between">
-          <div>
-            {/* Breadcrumb Header */}
-            <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
-                <span className="text-zinc-500">File Analysis</span>
-                <span className="text-zinc-600">&gt;</span>
-                <span className="text-emerald-400 font-semibold">{selectedFile}</span>
+        {/* Right Pane: Selected Node Dependency Details */}
+        <div className="lg:col-span-4 bg-zinc-900/40 p-4 md:p-5 flex flex-col justify-between font-mono text-xs">
+          {selectedNode ? (
+            <div className="space-y-4">
+              <div className="border-b border-zinc-800 pb-3">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  Selected Module
+                </span>
+                <p className="text-zinc-100 font-semibold text-sm break-all mt-0.5 flex items-center gap-2">
+                  {selectedNode.name.endsWith(".json") ? (
+                    <FileJson className="h-4 w-4 text-amber-400 shrink-0" />
+                  ) : (
+                    <FileCode className="h-4 w-4 text-emerald-400 shrink-0" />
+                  )}
+                  <span>{selectedNode.name}</span>
+                </p>
+                <p className="text-zinc-400 text-[11px] break-all bg-zinc-950 p-1.5 rounded border border-zinc-800/80 mt-1">
+                  {selectedNode.path}
+                </p>
               </div>
-              <span className="text-[11px] font-mono text-zinc-500">TypeScript React</span>
-            </div>
 
-            {/* Architecture Insight Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-3">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs mb-1">
-                  <Layers className="h-3.5 w-3.5 text-sky-400" />
-                  <span>Module Depth</span>
+              {/* Node Degrees Grid */}
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-lg bg-zinc-950 p-2.5 border border-zinc-800">
+                  <span className="text-[10px] text-zinc-500 uppercase">Imports (Out)</span>
+                  <p className="text-base font-bold text-sky-400 mt-0.5">{selectedNode.outDegree}</p>
                 </div>
-                <div className="text-lg font-bold font-mono text-zinc-100">3 Layers</div>
-                <div className="text-[10px] text-zinc-500 mt-1">Clean App Router Hierarchy</div>
-              </div>
-
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-3">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs mb-1">
-                  <Cpu className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Dependencies</span>
+                <div className="rounded-lg bg-zinc-950 p-2.5 border border-zinc-800">
+                  <span className="text-[10px] text-zinc-500 uppercase">Imported By (In)</span>
+                  <p className="text-base font-bold text-purple-400 mt-0.5">{selectedNode.inDegree}</p>
                 </div>
-                <div className="text-lg font-bold font-mono text-zinc-100">12 Imports</div>
-                <div className="text-[10px] text-zinc-500 mt-1">0 Circular References</div>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-3">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs mb-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Health Score</span>
-                </div>
-                <div className="text-lg font-bold font-mono text-emerald-400">98 / 100</div>
-                <div className="text-[10px] text-emerald-500/80 mt-1">Optimal maintainability</div>
-              </div>
-            </div>
+              {/* List: Files this file imports */}
+              <div>
+                <label className="text-[11px] text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <ArrowRight className="h-3 w-3 text-sky-400" />
+                  <span>Imports ({selectedNode.imports.length})</span>
+                </label>
 
-            {/* Simulated Code & Architecture Summary Box */}
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-300 space-y-2 leading-relaxed">
-              <div className="text-zinc-500 text-[11px]">
-                {"// RepoLens AI Architectural Insights Summary"}
+                {selectedNode.imports.length === 0 ? (
+                  <p className="text-[11px] text-zinc-600 mt-1 italic">No internal imports</p>
+                ) : (
+                  <div className="mt-1 max-h-[110px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    {selectedNode.imports.map((impPath) => (
+                      <div
+                        key={impPath}
+                        onClick={() => {
+                          const targetNode = nodes.find((n) => n.path === impPath);
+                          if (targetNode) setSelectedNodeId(targetNode.id);
+                        }}
+                        className="truncate rounded bg-zinc-950 px-2 py-1 text-[11px] text-sky-300 border border-zinc-800/60 hover:bg-zinc-800/60 cursor-pointer"
+                      >
+                        {impPath}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="text-emerald-400 font-semibold">
-                ✓ Architecture Pattern Identified: Modular Next.js App Router
-              </div>
-              <p className="text-zinc-400 text-xs">
-                This repository exhibits strict layer isolation. UI components in <code className="text-sky-300">src/components</code> decoupled from data clients in <code className="text-sky-300">src/lib</code>.
-              </p>
-              <div className="pt-2 flex flex-wrap gap-2">
-                <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-300">React Server Components</span>
-                <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-300">TypeScript Strict Mode</span>
-                <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-300">Tailwind CSS v4</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Bottom Live Analysis Bar */}
-          <div className="mt-6 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-[11px] font-mono text-zinc-500">
-            <div className="flex items-center gap-2">
-              <Activity className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-              <span>Scanning engine ready</span>
+              {/* List: Files that import this file */}
+              <div>
+                <label className="text-[11px] text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <ArrowLeft className="h-3 w-3 text-purple-400" />
+                  <span>Imported By ({selectedNode.importedBy.length})</span>
+                </label>
+
+                {selectedNode.importedBy.length === 0 ? (
+                  <p className="text-[11px] text-zinc-600 mt-1 italic font-sans">No dependent modules</p>
+                ) : (
+                  <div className="mt-1 max-h-[110px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    {selectedNode.importedBy.map((byPath) => (
+                      <div
+                        key={byPath}
+                        onClick={() => {
+                          const targetNode = nodes.find((n) => n.path === byPath);
+                          if (targetNode) setSelectedNodeId(targetNode.id);
+                        }}
+                        className="truncate rounded bg-zinc-950 px-2 py-1 text-[11px] text-purple-300 border border-zinc-800/60 hover:bg-zinc-800/60 cursor-pointer"
+                      >
+                        {byPath}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div>Analyzed 18 files &bull; 4,210 lines of code</div>
+          ) : (
+            <div className="py-12 text-center text-xs text-zinc-500">
+              Select a node in the graph network to view its dependency details.
+            </div>
+          )}
+
+          <div className="mt-4 flex items-start gap-2 rounded bg-zinc-950 p-2.5 text-[11px] text-zinc-400 border border-zinc-800">
+            <Info className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
+            <span>
+              Real dependency graph generated by resolving AST import paths against repository files.
+            </span>
           </div>
         </div>
       </div>

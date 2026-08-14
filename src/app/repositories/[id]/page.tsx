@@ -5,12 +5,15 @@ import { getRepositoryById } from "@/lib/repositories";
 import { getRepositoryFiles } from "@/lib/repositories/files";
 import { getRepositoryFileContentsSummary } from "@/lib/ingestion/source";
 import { getRepositoryAnalysisMap } from "@/lib/analysis/analyze-repository";
+import { getSerializedDependencyGraph } from "@/lib/analysis/dependency/build-graph";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { IngestButton } from "@/components/repositories/ingest-button";
 import { SourceIngestButton } from "@/components/repositories/source-ingest-button";
 import { AstAnalyzeButton } from "@/components/repositories/ast-analyze-button";
+import { DependencyGraphButton } from "@/components/repositories/dependency-graph-button";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
+import { CodebaseVisualizer } from "@/components/shared/codebase-visualizer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,10 +28,11 @@ import {
   CheckCircle2,
   FileCode,
   Cpu,
+  GitFork,
   Boxes,
-  FunctionSquare,
-  Component,
+  AlertTriangle,
   Info,
+  Package,
 } from "lucide-react";
 
 function formatBytes(bytes: number): string {
@@ -73,6 +77,9 @@ export default async function RepositoryDetailsPage({
   // Fetch real AST analysis data from public.repository_file_analysis
   const { analysisMap, summary: astSummary } = await getRepositoryAnalysisMap(repoId);
 
+  // Fetch real dependency graph & import resolution data from public.repository_dependencies
+  const serializedGraph = await getSerializedDependencyGraph(repoId);
+
   // Compute stats dynamically from stored repository_files
   const totalFiles = files.filter((f) => f.type === "file").length;
   const totalDirectories = files.filter((f) => f.type === "directory").length;
@@ -104,6 +111,9 @@ export default async function RepositoryDetailsPage({
   const isIndexing = status === "indexing";
   const isSourceIngested = sourceCount > 0;
   const isAstAnalyzed = Boolean(astSummary && astSummary.analyzedFiles > 0);
+  const isGraphBuilt = Boolean(
+    serializedGraph.summary && serializedGraph.summary.internalDependencies > 0
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 font-sans">
@@ -158,6 +168,13 @@ export default async function RepositoryDetailsPage({
                   <span>AST Analyzed</span>
                 </Badge>
               )}
+
+              {isGraphBuilt && (
+                <Badge variant="emerald" className="font-mono text-xs gap-1">
+                  <GitFork className="h-3 w-3 text-purple-400" />
+                  <span>Graph Resolved</span>
+                </Badge>
+              )}
             </div>
 
             {repository.description && (
@@ -207,16 +224,16 @@ export default async function RepositoryDetailsPage({
           </Card>
         )}
 
-        {/* Pipeline Control Grid (Source Ingestion & AST Analysis) */}
+        {/* Pipeline Control Grid (Source Ingestion, AST Analysis & Dependency Graph) */}
         {isIndexed && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Source Ingestion Card */}
             <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileCode className="h-4 w-4 text-emerald-400" />
-                    <h3 className="text-sm font-semibold text-zinc-100">1. Source Code Ingestion</h3>
+                    <h3 className="text-sm font-semibold text-zinc-100">1. Source Ingestion</h3>
                   </div>
                   {isSourceIngested ? (
                     <Badge variant="emerald" className="font-mono text-[10px]">
@@ -229,7 +246,7 @@ export default async function RepositoryDetailsPage({
                   )}
                 </div>
                 <p className="text-xs text-zinc-400 mt-2">
-                  Fetch raw UTF-8 file contents from GitHub Contents API for TypeScript, Python, and configuration files.
+                  Fetch raw UTF-8 file contents from GitHub Contents API for code files.
                 </p>
               </div>
 
@@ -248,7 +265,7 @@ export default async function RepositoryDetailsPage({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Cpu className="h-4 w-4 text-sky-400" />
-                    <h3 className="text-sm font-semibold text-zinc-100">2. AST Structural Analysis</h3>
+                    <h3 className="text-sm font-semibold text-zinc-100">2. AST Analysis</h3>
                   </div>
                   {isAstAnalyzed ? (
                     <Badge variant="emerald" className="font-mono text-[10px]">
@@ -261,7 +278,7 @@ export default async function RepositoryDetailsPage({
                   )}
                 </div>
                 <p className="text-xs text-zinc-400 mt-2">
-                  Extract deterministic structural facts (Imports, Exports, Functions, Classes, React Components) via TypeScript Compiler AST.
+                  Extract imports, exports, functions, classes, and React components via TypeScript Compiler AST.
                 </p>
               </div>
 
@@ -273,8 +290,124 @@ export default async function RepositoryDetailsPage({
                 />
               </div>
             </Card>
+
+            {/* Dependency Graph Builder Card */}
+            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <GitFork className="h-4 w-4 text-purple-400" />
+                    <h3 className="text-sm font-semibold text-zinc-100">3. Dependency Graph</h3>
+                  </div>
+                  {isGraphBuilt ? (
+                    <Badge variant="emerald" className="font-mono text-[10px]">
+                      Resolved ({serializedGraph.edges.length} edges)
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
+                      Pending AST
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-400 mt-2">
+                  Resolve internal import paths, detect circular dependencies, and build repository dependency graph.
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-zinc-800/80">
+                <DependencyGraphButton
+                  repositoryId={repository.id}
+                  isGraphBuilt={isGraphBuilt}
+                  disabled={!isAstAnalyzed}
+                />
+              </div>
+            </Card>
           </div>
         )}
+
+        {/* Dependency Intelligence Metrics & Cycles Card */}
+        {isGraphBuilt && serializedGraph.summary && (
+          <Card className="border-purple-500/30 bg-purple-500/5 p-5 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <GitFork className="h-4 w-4 text-purple-400" />
+                <h3 className="text-sm font-semibold text-zinc-100">Dependency Intelligence Metrics</h3>
+              </div>
+              {serializedGraph.summary.circularDependencyCount > 0 && (
+                <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>{serializedGraph.summary.circularDependencyCount} Circular Reference Cycle(s)</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-4">
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Internal Dependencies</span>
+                <p className="text-xl font-bold text-purple-400 mt-0.5">
+                  {serializedGraph.summary.internalDependencies}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">External Packages</span>
+                <p className="text-xl font-bold text-sky-400 mt-0.5">
+                  {serializedGraph.summary.externalDependencies}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Unresolved Imports</span>
+                <p className="text-xl font-bold text-amber-400 mt-0.5">
+                  {serializedGraph.summary.unresolvedDependencies}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800">
+                <span className="text-[11px] text-zinc-500 uppercase">Circular Cycles</span>
+                <p className="text-xl font-bold text-rose-400 mt-0.5">
+                  {serializedGraph.summary.circularDependencyCount}
+                </p>
+              </div>
+            </div>
+
+            {/* Top Imported Files Breakdown */}
+            {serializedGraph.summary.mostImportedFiles.length > 0 && (
+              <div className="pt-3 border-t border-purple-500/20">
+                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-2">
+                  Top Imported Files (Most Depended On)
+                </label>
+                <div className="flex flex-wrap gap-2 text-xs font-mono">
+                  {serializedGraph.summary.mostImportedFiles.map((file) => (
+                    <div
+                      key={file.path}
+                      className="inline-flex items-center gap-2 rounded bg-zinc-950 px-2.5 py-1 text-zinc-300 border border-zinc-800"
+                    >
+                      <span className="truncate max-w-[200px]">{file.path}</span>
+                      <span className="text-purple-400 font-bold">({file.count} imports)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Codebase Dependency Network Visualizer (Feature 7) */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+              <Boxes className="h-4 w-4 text-purple-400" />
+              <span>Interactive Repository Dependency Network</span>
+            </h2>
+            <span className="text-xs text-zinc-500 font-mono">Real Graph Data</span>
+          </div>
+          <CodebaseVisualizer
+            graphData={serializedGraph}
+            repositoryFullName={repository.full_name}
+            defaultBranch={repository.default_branch || "main"}
+          />
+        </div>
 
         {/* Real Ingestion Statistics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -327,7 +460,7 @@ export default async function RepositoryDetailsPage({
           </Card>
         </div>
 
-        {/* Real Extracted AST Facts Summary Grid */}
+        {/* Extracted AST Facts Summary Grid */}
         {isAstAnalyzed && astSummary && (
           <Card className="border-zinc-800 bg-zinc-900/40 p-5 mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -431,6 +564,7 @@ export default async function RepositoryDetailsPage({
           files={files}
           ingestedFileIds={ingestedFileIds}
           analysisMap={analysisMap}
+          graphData={serializedGraph}
         />
       </main>
       <Footer />
