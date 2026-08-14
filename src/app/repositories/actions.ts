@@ -10,6 +10,7 @@ import { buildRepositorySymbols } from "@/lib/analysis/symbols/build-symbols";
 import { buildRepositoryArchitectureScore } from "@/lib/analysis/architecture/score-architecture";
 import { analyzeFileImpact } from "@/lib/analysis/impact/analyze-impact";
 import { searchCodebase } from "@/lib/search/codebase-search";
+import { generateAICodebasePromptContext } from "@/lib/ai/codebase-intelligence";
 import { GitHubRepo, CreateRepositoryInput, CodebaseSearchFilters } from "@/types";
 
 /**
@@ -206,4 +207,18 @@ export async function searchCodebaseAction(
     return { success: false, error: "Missing repository ID." };
   }
   return await searchCodebase(repositoryId, query, filters);
+}
+
+/**
+ * Server Action: Generate Noise-Free AI Context Payload for LLMs & AI Coding Assistants (Feature 11).
+ */
+export async function generateAIContextAction(
+  repositoryId: string,
+  fileId?: string,
+  query?: string
+) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+  return await generateAICodebasePromptContext(repositoryId, fileId, query);
 }

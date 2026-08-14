@@ -534,3 +534,37 @@ export interface CodebaseSearchResult {
   matchingFiles: SearchMatchFile[];
   matchingSymbols: SearchMatchSymbol[];
 }
+
+/**
+ * Feature 11: AI Codebase Intelligence Domain Types
+ */
+export interface AICodebasePromptContext {
+  repositoryName: string;
+  targetFilePath?: string;
+  query?: string;
+  summary: {
+    totalFiles: number;
+    totalSymbols: number;
+    healthScore: number | null;
+  };
+  symbolDefinitions: {
+    name: string;
+    kind: SymbolKind;
+    definingPath: string;
+    isExported: boolean;
+    referenceCount: number;
+  }[];
+  dependencyEdges: {
+    source: string;
+    target: string;
+    type: string;
+  }[];
+  impactTree?: {
+    risk: ImpactRisk;
+    directCount: number;
+    transitiveCount: number;
+    affectedRoutes: string[];
+  };
+  formattedMarkdownPrompt: string;
+  estimatedTokensCount: number;
+}
