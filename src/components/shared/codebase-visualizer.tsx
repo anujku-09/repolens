@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { SerializedGraphData, GraphNode } from "@/types";
+import { useState, useMemo, useRef, MouseEvent } from "react";
+import { SerializedGraphData } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import {
   FileCode,
@@ -11,13 +11,14 @@ import {
   ZoomOut,
   RotateCcw,
   GitBranch,
-  Layers,
   ArrowRight,
   ArrowLeft,
   Share2,
   CheckCircle2,
   AlertTriangle,
   Info,
+  Maximize,
+  Move,
 } from "lucide-react";
 
 interface CodebaseVisualizerProps {
@@ -34,6 +35,12 @@ export function CodebaseVisualizer({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const nodes = graphData?.nodes || [];
   const edges = graphData?.edges || [];
@@ -67,22 +74,70 @@ export function CodebaseVisualizer({
     return set;
   }, [selectedNode]);
 
-  // Calculate layout coordinates for SVG network graph nodes
+  // Calculate intelligent multi-ring concentric layout coordinates
   const layoutNodes = useMemo(() => {
-    const list = filteredNodes.slice(0, 40); // Max 40 nodes rendered visually for performance
+    const list = filteredNodes.slice(0, 50); // Max 50 nodes visual limit
     const count = list.length;
     if (count === 0) return [];
 
-    const radius = Math.min(220 + count * 6, 320);
-    const centerX = 360;
-    const centerY = 240;
+    const centerX = 500;
+    const centerY = 320;
 
-    return list.map((node, i) => {
-      const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-      return { ...node, x, y };
+    // Group nodes into 3 concentric functional rings based on path/type/degree
+    const coreNodes: typeof list = [];
+    const componentNodes: typeof list = [];
+    const pageNodes: typeof list = [];
+
+    list.forEach((node) => {
+      const p = node.path;
+      if (p.includes("/lib/") || p.includes("/types/") || node.inDegree >= 8) {
+        coreNodes.push(node);
+      } else if (p.includes("/components/")) {
+        componentNodes.push(node);
+      } else {
+        pageNodes.push(node);
+      }
     });
+
+    const result: ((typeof list)[0] & { x: number; y: number; ring: string })[] = [];
+
+    // Inner Core Ring (Radius 140px)
+    coreNodes.forEach((node, i) => {
+      const angle = (i / Math.max(coreNodes.length, 1)) * 2 * Math.PI - Math.PI / 2;
+      const radius = 140;
+      result.push({
+        ...node,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+        ring: "core",
+      });
+    });
+
+    // Middle Components Ring (Radius 260px)
+    componentNodes.forEach((node, i) => {
+      const angle = (i / Math.max(componentNodes.length, 1)) * 2 * Math.PI - Math.PI / 4;
+      const radius = 260;
+      result.push({
+        ...node,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+        ring: "component",
+      });
+    });
+
+    // Outer Pages Ring (Radius 370px)
+    pageNodes.forEach((node, i) => {
+      const angle = (i / Math.max(pageNodes.length, 1)) * 2 * Math.PI;
+      const radius = 370;
+      result.push({
+        ...node,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+        ring: "page",
+      });
+    });
+
+    return result;
   }, [filteredNodes]);
 
   const layoutMap = useMemo(() => {
@@ -90,6 +145,30 @@ export function CodebaseVisualizer({
     layoutNodes.forEach((n) => map.set(n.path, { x: n.x, y: n.y }));
     return map;
   }, [layoutNodes]);
+
+  // Mouse Drag / Pan Handlers
+  const handleMouseDown = (e: MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const resetView = () => {
+    setZoomLevel(1);
+    setPan({ x: 0, y: 0 });
+  };
 
   if (nodes.length === 0) {
     return (
@@ -102,6 +181,8 @@ export function CodebaseVisualizer({
       </div>
     );
   }
+
+  const hoveredNode = hoveredNodeId ? layoutNodes.find((n) => n.id === hoveredNodeId) : null;
 
   return (
     <div className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden font-sans">
@@ -137,27 +218,36 @@ export function CodebaseVisualizer({
         </div>
       </div>
 
-      {/* Main Graph & Inspector Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[460px]">
-        {/* Left Interactive SVG Network Graph */}
-        <div className="lg:col-span-8 border-b lg:border-b-0 lg:border-r border-zinc-800/80 bg-zinc-950 p-4 relative flex flex-col justify-between overflow-hidden">
-          {/* Controls Bar */}
-          <div className="flex items-center justify-between gap-3 mb-3 z-10">
+      {/* Main Graph Canvas & Inspector Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[520px]">
+        {/* Left Interactive SVG Canvas */}
+        <div
+          ref={containerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          className={`lg:col-span-8 border-b lg:border-b-0 lg:border-r border-zinc-800/80 bg-zinc-950 p-4 relative flex flex-col justify-between overflow-hidden ${
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+        >
+          {/* Canvas Search & Control Bar */}
+          <div className="flex items-center justify-between gap-3 mb-2 z-20 pointer-events-auto">
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search file node by name..."
+                placeholder="Search module by name or path..."
                 className="w-full rounded-md border border-zinc-800 bg-zinc-900/90 pl-8 pr-3 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-purple-500 focus:outline-none transition-colors"
               />
             </div>
 
-            <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-md p-1 font-mono text-xs text-zinc-400">
+            <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-md p-1 font-mono text-xs text-zinc-400">
               <button
                 type="button"
-                onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 1.8))}
+                onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 2.0))}
                 className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
                 title="Zoom In"
               >
@@ -165,7 +255,7 @@ export function CodebaseVisualizer({
               </button>
               <button
                 type="button"
-                onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.6))}
+                onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.5))}
                 className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
                 title="Zoom Out"
               >
@@ -173,103 +263,177 @@ export function CodebaseVisualizer({
               </button>
               <button
                 type="button"
-                onClick={() => setZoomLevel(1)}
-                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800"
-                title="Reset Zoom"
+                onClick={resetView}
+                className="p-1 hover:text-zinc-100 rounded hover:bg-zinc-800 flex items-center gap-1"
+                title="Reset View"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
+                <span className="text-[10px] hidden sm:inline">Fit</span>
               </button>
-              <span className="px-1 text-[11px] text-zinc-500">{(zoomLevel * 100).toFixed(0)}%</span>
+              <span className="px-1.5 text-[11px] text-zinc-500 font-bold">
+                {(zoomLevel * 100).toFixed(0)}%
+              </span>
             </div>
           </div>
 
-          {/* SVG Graph Canvas */}
-          <div className="flex-1 min-h-[360px] flex items-center justify-center overflow-hidden relative">
+          {/* SVG Network Canvas */}
+          <div className="flex-1 min-h-[440px] flex items-center justify-center overflow-hidden relative select-none">
             <svg
-              viewBox="0 0 720 480"
-              className="w-full h-full max-h-[440px] transition-transform duration-200 ease-out cursor-grab"
-              style={{ transform: `scale(${zoomLevel})` }}
+              viewBox="0 0 1000 640"
+              className="w-full h-full max-h-[500px] transition-transform duration-75 ease-out"
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`,
+              }}
             >
               <defs>
+                {/* Arrowhead Markers */}
                 <marker
                   id="arrowhead"
                   markerWidth="8"
                   markerHeight="6"
-                  refX="14"
+                  refX="16"
                   refY="3"
                   orient="auto"
                 >
-                  <polygon points="0 0, 8 3, 0 6" fill="#a855f7" opacity="0.6" />
+                  <polygon points="0 0, 8 3, 0 6" fill="#52525b" opacity="0.5" />
                 </marker>
                 <marker
                   id="arrowhead-active"
-                  markerWidth="8"
-                  markerHeight="6"
-                  refX="14"
-                  refY="3"
+                  markerWidth="10"
+                  markerHeight="7"
+                  refX="18"
+                  refY="3.5"
                   orient="auto"
                 >
-                  <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#38bdf8" />
                 </marker>
+                <marker
+                  id="arrowhead-in"
+                  markerWidth="10"
+                  markerHeight="7"
+                  refX="18"
+                  refY="3.5"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#c084fc" />
+                </marker>
+
+                {/* Concentric Glow Filters */}
+                <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
 
-              {/* Edge Lines */}
+              {/* Concentric Layer Guide Rings */}
+              <circle cx="500" cy="320" r="140" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+              <circle cx="500" cy="320" r="260" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+              <circle cx="500" cy="320" r="370" fill="none" stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
+
+              {/* Smooth Curved Quadratic Edge Lines */}
               {edges.map((edge) => {
                 const src = layoutMap.get(edge.source);
                 const tgt = layoutMap.get(edge.target);
                 if (!src || !tgt) return null;
 
-                const isConnectedToSelected =
-                  selectedNode &&
-                  (edge.source === selectedNode.path || edge.target === selectedNode.path);
+                const isSourceSelected = selectedNode && edge.source === selectedNode.path;
+                const isTargetSelected = selectedNode && edge.target === selectedNode.path;
+                const isConnectedToSelected = isSourceSelected || isTargetSelected;
+
+                // Compute smooth control point for curve
+                const midX = (src.x + tgt.x) / 2;
+                const midY = (src.y + tgt.y) / 2;
+                const dx = tgt.x - src.x;
+                const dy = tgt.y - src.y;
+                const norm = Math.sqrt(dx * dx + dy * dy) || 1;
+                // Offset curve control point perpendicularly
+                const controlX = midX - (dy / norm) * 20;
+                const controlY = midY + (dx / norm) * 20;
+
+                const strokeColor = isSourceSelected
+                  ? "#38bdf8"
+                  : isTargetSelected
+                  ? "#c084fc"
+                  : "#27272a";
+
+                const strokeMarker = isSourceSelected
+                  ? "url(#arrowhead-active)"
+                  : isTargetSelected
+                  ? "url(#arrowhead-in)"
+                  : "url(#arrowhead)";
 
                 return (
-                  <line
+                  <path
                     key={edge.id}
-                    x1={src.x}
-                    y1={src.y}
-                    x2={tgt.x}
-                    y2={tgt.y}
-                    stroke={isConnectedToSelected ? "#38bdf8" : "#3f3f46"}
-                    strokeWidth={isConnectedToSelected ? 2 : 1}
+                    d={`M ${src.x} ${src.y} Q ${controlX} ${controlY} ${tgt.x} ${tgt.y}`}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={isConnectedToSelected ? 2.5 : 1}
                     strokeDasharray={isConnectedToSelected ? undefined : "3 3"}
-                    opacity={isConnectedToSelected ? 1 : 0.4}
-                    markerEnd={isConnectedToSelected ? "url(#arrowhead-active)" : "url(#arrowhead)"}
+                    opacity={isConnectedToSelected ? 0.95 : 0.25}
+                    markerEnd={strokeMarker}
                   />
                 );
               })}
 
-              {/* Node Elements */}
+              {/* Network Node Elements */}
               {layoutNodes.map((node) => {
                 const isSelected = selectedNode?.path === node.path;
                 const isConnected = connectedPaths.has(node.path);
 
-                const nodeColor = node.path.endsWith(".tsx") || node.path.endsWith(".jsx")
-                  ? "#38bdf8"
-                  : node.path.endsWith(".ts") || node.path.endsWith(".js")
-                  ? "#10b981"
-                  : "#f59e0b";
+                // Color code nodes logically by layer / type
+                const nodeColor = node.path.includes("/components/")
+                  ? "#34d399" // Emerald for components
+                  : node.path.includes("/lib/") || node.path.includes("/types/")
+                  ? "#c084fc" // Purple for core logic
+                  : node.path.endsWith(".json") || node.path.endsWith(".css")
+                  ? "#fbbf24" // Amber for configs/styles
+                  : "#38bdf8"; // Cyan for pages/routes
 
                 return (
                   <g
                     key={node.id}
                     transform={`translate(${node.x}, ${node.y})`}
-                    onClick={() => setSelectedNodeId(node.id)}
-                    className="cursor-pointer transition-transform duration-150 hover:scale-110"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedNodeId(node.id);
+                    }}
+                    onMouseEnter={() => setHoveredNodeId(node.id)}
+                    onMouseLeave={() => setHoveredNodeId(null)}
+                    className="cursor-pointer"
                   >
+                    {/* Glowing Selection Aura */}
+                    {isSelected && (
+                      <circle
+                        r="20"
+                        fill={nodeColor}
+                        fillOpacity="0.2"
+                        stroke={nodeColor}
+                        strokeWidth="2"
+                        filter="url(#glow-cyan)"
+                      />
+                    )}
+
+                    {/* Outer Ring */}
                     <circle
-                      r={isSelected ? 16 : isConnected ? 12 : 9}
+                      r={isSelected ? 14 : isConnected ? 10 : 8}
                       fill={nodeColor}
-                      fillOpacity={isSelected ? 0.3 : isConnected ? 0.2 : 0.1}
+                      fillOpacity={isSelected ? 0.4 : isConnected ? 0.25 : 0.15}
                       stroke={nodeColor}
                       strokeWidth={isSelected ? 3 : isConnected ? 2 : 1}
                     />
-                    <circle r={isSelected ? 6 : 4} fill={nodeColor} />
 
+                    {/* Center Core Dot */}
+                    <circle r={isSelected ? 5 : 3.5} fill={nodeColor} />
+
+                    {/* Node Label Text */}
                     <text
                       y={isSelected ? 26 : 20}
                       textAnchor="middle"
-                      fill={isSelected ? "#f4f4f5" : isConnected ? "#e4e4e7" : "#a1a1aa"}
+                      fill={isSelected ? "#f4f4f5" : isConnected ? "#e4e4e7" : "#71717a"}
                       fontSize={isSelected ? "11" : "9"}
                       fontFamily="monospace"
                       fontWeight={isSelected ? "bold" : "normal"}
@@ -280,15 +444,30 @@ export function CodebaseVisualizer({
                 );
               })}
             </svg>
+
+            {/* Hover Tooltip Overlay */}
+            {hoveredNode && (
+              <div className="absolute top-4 left-4 pointer-events-none rounded-lg border border-zinc-800 bg-zinc-950/90 p-2.5 shadow-xl font-mono text-[11px] text-zinc-200 z-30 max-w-xs backdrop-blur-md">
+                <p className="font-semibold text-emerald-400">{hoveredNode.name}</p>
+                <p className="text-[10px] text-zinc-400 truncate mt-0.5">{hoveredNode.path}</p>
+                <div className="flex gap-3 text-[10px] text-zinc-400 mt-1 pt-1 border-t border-zinc-800">
+                  <span>Out: <strong className="text-sky-400">{hoveredNode.outDegree}</strong></span>
+                  <span>In: <strong className="text-purple-400">{hoveredNode.inDegree}</strong></span>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="pt-2 text-[11px] font-mono text-zinc-500 flex justify-between">
-            <span>Showing top {layoutNodes.length} file nodes in graph</span>
-            <span>Click any node to highlight dependencies</span>
+          <div className="pt-2 text-[11px] font-mono text-zinc-500 flex justify-between items-center z-10 pointer-events-auto">
+            <div className="flex items-center gap-2">
+              <Move className="h-3 w-3 text-zinc-600" />
+              <span>Click & Drag to pan &bull; Scroll / Zoom controls</span>
+            </div>
+            <span>Showing top {layoutNodes.length} modules</span>
           </div>
         </div>
 
-        {/* Right Pane: Selected Node Dependency Details */}
+        {/* Right Inspector Pane: Selected Node Dependency Details */}
         <div className="lg:col-span-4 bg-zinc-900/40 p-4 md:p-5 flex flex-col justify-between font-mono text-xs">
           {selectedNode ? (
             <div className="space-y-4">
@@ -331,7 +510,7 @@ export function CodebaseVisualizer({
                 {selectedNode.imports.length === 0 ? (
                   <p className="text-[11px] text-zinc-600 mt-1 italic">No internal imports</p>
                 ) : (
-                  <div className="mt-1 max-h-[110px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  <div className="mt-1 max-h-[120px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                     {selectedNode.imports.map((impPath) => (
                       <div
                         key={impPath}
@@ -358,7 +537,7 @@ export function CodebaseVisualizer({
                 {selectedNode.importedBy.length === 0 ? (
                   <p className="text-[11px] text-zinc-600 mt-1 italic font-sans">No dependent modules</p>
                 ) : (
-                  <div className="mt-1 max-h-[110px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  <div className="mt-1 max-h-[120px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                     {selectedNode.importedBy.map((byPath) => (
                       <div
                         key={byPath}
