@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Profile } from "@/types";
 import { updateProfileAction } from "@/app/settings/actions";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ userEmail, userId, initialProfile }: ProfileFormProps) {
+  const router = useRouter();
   const [username, setUsername] = useState(initialProfile?.username || "");
   const [avatarUrl, setAvatarUrl] = useState(initialProfile?.avatar_url || "");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +39,7 @@ export function ProfileForm({ userEmail, userId, initialProfile }: ProfileFormPr
         setErrorMessage(result.error || "Failed to update profile.");
       } else {
         setSuccessMessage("Profile updated successfully in public.profiles table!");
+        router.refresh();
       }
     } catch (err) {
       console.error("[ProfileForm Error]:", err);
