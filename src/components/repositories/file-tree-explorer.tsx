@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { RepositoryFile } from "@/types";
+import { isAnalyzableSourceFile } from "@/lib/ingestion/source-policy";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,10 +20,13 @@ import {
   Minimize2,
   HardDrive,
   Info,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 interface FileTreeExplorerProps {
   files: RepositoryFile[];
+  ingestedFileIds?: Set<string>;
 }
 
 interface TreeNode {
@@ -76,7 +80,7 @@ function getFileIcon(file: RepositoryFile) {
   return <File className="h-4 w-4 text-zinc-400 shrink-0" />;
 }
 
-export function FileTreeExplorer({ files }: FileTreeExplorerProps) {
+export function FileTreeExplorer({ files, ingestedFileIds = new Set() }: FileTreeExplorerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set([""]));
   const [selectedFile, setSelectedFile] = useState<RepositoryFile | null>(null);
@@ -151,6 +155,7 @@ export function FileTreeExplorer({ files }: FileTreeExplorerProps) {
     const isDir = file.type === "directory";
     const isExpanded = expandedPaths.has(file.path);
     const isSelected = selectedFile?.id === file.id;
+    const isSourceIngested = ingestedFileIds.has(file.id);
 
     return (
       <div key={file.id} className="select-none font-mono text-xs">
@@ -201,7 +206,10 @@ export function FileTreeExplorer({ files }: FileTreeExplorerProps) {
             <span className="truncate">{file.name}</span>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 text-[11px] text-zinc-500">
+          <div className="flex items-center gap-2.5 shrink-0 text-[11px] text-zinc-500">
+            {isSourceIngested && (
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" title="Source Content Indexed" />
+            )}
             {file.language && (
               <Badge variant="mono" className="text-[10px] py-0 px-1.5">
                 {file.language}
@@ -344,6 +352,30 @@ export function FileTreeExplorer({ files }: FileTreeExplorerProps) {
                 </p>
               </div>
 
+              {/* Source Content Index Status */}
+              <div>
+                <label className="text-[11px] text-zinc-500 uppercase tracking-wider">
+                  Source Content Status
+                </label>
+                <div className="mt-1">
+                  {ingestedFileIds.has(selectedFile.id) ? (
+                    <Badge variant="emerald" className="gap-1 font-mono text-[11px]">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Source: Indexed</span>
+                    </Badge>
+                  ) : isAnalyzableSourceFile(selectedFile) ? (
+                    <Badge variant="mono" className="gap-1 font-mono text-[11px] text-zinc-400">
+                      <XCircle className="h-3 w-3 text-zinc-500" />
+                      <span>Source: Not Indexed</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="gap-1 font-mono text-[11px] text-zinc-500">
+                      <span>Skipped (Oversized / Non-code)</span>
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-zinc-800/60">
                 <div>
                   <label className="text-[11px] text-zinc-500">Type</label>
@@ -394,7 +426,7 @@ export function FileTreeExplorer({ files }: FileTreeExplorerProps) {
         <div className="mt-6 flex items-start gap-2 rounded bg-zinc-950 p-3 text-[11px] text-zinc-400 border border-zinc-800">
           <Info className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
           <span>
-            Metadata indexing complete. File AST structure &amp; lines of code (LOC) parsing will be calculated upon content ingestion in Feature 5.
+            Source code ingestion persists raw UTF-8 content in PostgreSQL. AST parsing &amp; dependency extraction will be enabled in Feature 6.
           </span>
         </div>
       </Card>

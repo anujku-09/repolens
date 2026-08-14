@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, and File Ingestion.
+ * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion & Source Code Ingestion.
  */
 
 export interface Profile {
@@ -123,11 +123,50 @@ export interface RepositoryFileInsert {
 }
 
 /**
- * Ingestion Summary Statistics
+ * Ingestion Summary Statistics (File Tree)
  */
 export interface IngestionSummary {
   totalFiles: number;
   totalDirectories: number;
   totalCodeSize: number;
   languageBreakdown: Record<string, { count: number; bytes: number }>;
+}
+
+/**
+ * Database Record for public.repository_file_contents
+ */
+export interface RepositoryFileContent {
+  id: string;
+  repository_file_id: string;
+  repository_id: string;
+  user_id: string;
+  content: string;
+  sha: string | null;
+  encoding: string;
+  size: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RepositoryFileContentInsert {
+  repository_file_id: string;
+  repository_id: string;
+  user_id: string;
+  content: string;
+  sha?: string | null;
+  encoding?: string;
+  size?: number | null;
+}
+
+/**
+ * Source Code Ingestion Summary Statistics
+ */
+export interface SourceIngestionSummary {
+  totalFiles: number;
+  analyzableFiles: number;
+  ingestedFiles: number;
+  skippedFiles: number;
+  failedFiles: number;
+  totalBytes: number;
+  languages: Record<string, number>;
 }

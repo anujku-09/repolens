@@ -3,25 +3,26 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getRepositoryById } from "@/lib/repositories";
 import { getRepositoryFiles } from "@/lib/repositories/files";
+import { getRepositoryFileContentsSummary } from "@/lib/ingestion/source";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { IngestButton } from "@/components/repositories/ingest-button";
+import { SourceIngestButton } from "@/components/repositories/source-ingest-button";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   GitBranch,
-  Calendar,
   ExternalLink,
   Files,
   FolderTree,
   HardDrive,
   Code2,
   Database,
-  AlertCircle,
+  CheckCircle2,
+  FileCode,
 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -55,8 +56,12 @@ export default async function RepositoryDetailsPage({
     notFound();
   }
 
-  // Fetch real repository files stored in database
+  // Fetch real repository file metadata stored in database
   const files = await getRepositoryFiles(repoId);
+
+  // Fetch real source code contents summary from public.repository_file_contents
+  const { count: sourceCount, totalBytes: sourceBytes, ingestedFileIds } =
+    await getRepositoryFileContentsSummary(repoId);
 
   // Compute stats dynamically from stored repository_files
   const totalFiles = files.filter((f) => f.type === "file").length;
@@ -87,6 +92,7 @@ export default async function RepositoryDetailsPage({
   const status = repository.status || "connected";
   const isIndexed = status === "indexed";
   const isIndexing = status === "indexing";
+  const isSourceIngested = sourceCount > 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 font-sans">
@@ -114,12 +120,12 @@ export default async function RepositoryDetailsPage({
               {/* Real Status Badge */}
               {status === "indexed" && (
                 <Badge variant="emerald" className="font-mono text-xs">
-                  Indexed
+                  File Tree Indexed
                 </Badge>
               )}
               {status === "indexing" && (
                 <Badge variant="amber" className="font-mono text-xs animate-pulse">
-                  Indexing...
+                  Indexing Tree...
                 </Badge>
               )}
               {status === "connected" && (
@@ -130,6 +136,13 @@ export default async function RepositoryDetailsPage({
               {status === "failed" && (
                 <Badge variant="rose" className="font-mono text-xs">
                   Indexing Failed
+                </Badge>
+              )}
+
+              {isSourceIngested && (
+                <Badge variant="emerald" className="font-mono text-xs gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span>Source Indexed ({sourceCount} files)</span>
                 </Badge>
               )}
             </div>
@@ -176,6 +189,43 @@ export default async function RepositoryDetailsPage({
                     This repository has not been ingested yet. Click &quot;Ingest Repository&quot; to fetch and index its complete Git file tree.
                   </p>
                 </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Dedicated Source Code Ingestion Section */}
+        {isIndexed && (
+          <Card className="border-zinc-800 bg-zinc-900/50 p-6 mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileCode className="h-5 w-5 text-emerald-400" />
+                  <h3 className="text-base font-semibold text-zinc-100">Source Code Ingestion</h3>
+                  {isSourceIngested ? (
+                    <Badge variant="emerald" className="font-mono text-xs">
+                      Source Code Indexed
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="font-mono text-xs text-zinc-400">
+                      Not Ingested
+                    </Badge>
+                  )}
+                </div>
+
+                <p className="text-xs text-zinc-400 mt-1 max-w-xl">
+                  {isSourceIngested
+                    ? `Successfully ingested ${sourceCount} source files (${formatBytes(sourceBytes)} total). Source contents are stored in database.`
+                    : "Fetch and store actual source code contents for TypeScript, Python, Go, and configuration files to prepare for AST analysis."}
+                </p>
+              </div>
+
+              <div className="shrink-0">
+                <SourceIngestButton
+                  repositoryId={repository.id}
+                  isIngested={isSourceIngested}
+                  disabled={!isIndexed}
+                />
               </div>
             </div>
           </Card>
@@ -280,7 +330,7 @@ export default async function RepositoryDetailsPage({
         )}
 
         {/* Interactive File Tree Explorer Component */}
-        <FileTreeExplorer files={files} />
+        <FileTreeExplorer files={files} ingestedFileIds={ingestedFileIds} />
       </main>
       <Footer />
     </div>

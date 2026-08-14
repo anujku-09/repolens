@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createRepository, getRepositories, deleteRepository } from "@/lib/repositories";
 import { ingestRepositoryTree } from "@/lib/repositories/files";
+import { ingestRepositorySource } from "@/lib/ingestion/source";
 import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
@@ -64,6 +65,23 @@ export async function ingestRepositoryAction(repositoryId: string) {
   }
 
   const result = await ingestRepositoryTree(repositoryId);
+
+  revalidatePath("/repositories");
+  revalidatePath(`/repositories/${repositoryId}`);
+  revalidatePath("/dashboard");
+
+  return result;
+}
+
+/**
+ * Server Action: Ingest Source Code Contents from GitHub Contents API.
+ */
+export async function ingestRepositorySourceAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+
+  const result = await ingestRepositorySource(repositoryId);
 
   revalidatePath("/repositories");
   revalidatePath(`/repositories/${repositoryId}`);

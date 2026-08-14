@@ -14,6 +14,15 @@ export interface FetchRepositoryTreeResult {
   isGitHubAuth: boolean;
 }
 
+export interface FetchFileContentResult {
+  content: string | null;
+  sha: string | null;
+  size: number;
+  encoding: string;
+  error: string | null;
+  isRateLimited?: boolean;
+}
+
 /**
  * Server-Side GitHub API Service
  * Securely retrieves the authenticated user's repositories from GitHub REST API
@@ -217,6 +226,127 @@ export async function fetchRepositoryTree(
       truncated: false,
       error: "Failed to connect to GitHub Git Trees API.",
       isGitHubAuth: true,
+    };
+  }
+}
+
+/**
+ * Server-Side GitHub Contents API Fetcher
+ * Securely fetches single file raw content from GitHub Contents API.
+ * Decodes Base64 encoded payload into UTF-8 source string.
+ */
+export async function fetchRepositoryFileContent(
+  owner: string,
+  repo: string,
+  path: string,
+  defaultBranch: string = "main"
+): Promise<FetchFileContentResult> {
+  const supabase = await createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return { content: null, sha: null, size: 0, encoding: "utf-8", error: "Unauthenticated" };
+  }
+
+  const providerToken = session.provider_token;
+
+  if (!providerToken) {
+    return {
+      content: null,
+      sha: null,
+      size: 0,
+      encoding: "utf-8",
+      error: "GitHub OAuth session provider token unavailable.",
+    };
+  }
+
+  const branch = defaultBranch || "main";
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${providerToken}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "RepoLens-App",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        return {
+          content: null,
+          sha: null,
+          size: 0,
+          encoding: "utf-8",
+          error: "GitHub API rate limit exceeded or access forbidden.",
+          isRateLimited: true,
+        };
+      }
+
+      if (response.status === 404) {
+        return {
+          content: null,
+          sha: null,
+          size: 0,
+          encoding: "utf-8",
+          error: `File path '${path}' not found on branch '${branch}'.`,
+        };
+      }
+
+      return {
+        content: null,
+        sha: null,
+        size: 0,
+        encoding: "utf-8",
+        error: `GitHub Contents API returned status ${response.status}`,
+      };
+    }
+
+    const data = await response.json();
+
+    if (Array.isArray(data)) {
+      return {
+        content: null,
+        sha: null,
+        size: 0,
+        encoding: "utf-8",
+        error: `Path '${path}' resolves to a directory, not a file.`,
+      };
+    }
+
+    const rawContent = data.content || "";
+    const sha = data.sha || null;
+    const size = typeof data.size === "number" ? data.size : 0;
+    const encoding = data.encoding || "base64";
+
+    let utf8Content = "";
+    if (encoding === "base64") {
+      utf8Content = Buffer.from(rawContent, "base64").toString("utf-8");
+    } else {
+      utf8Content = rawContent;
+    }
+
+    return {
+      content: utf8Content,
+      sha,
+      size,
+      encoding: "utf-8",
+      error: null,
+    };
+  } catch (err) {
+    console.error(`[fetchRepositoryFileContent Exception for ${path}]:`, err);
+    return {
+      content: null,
+      sha: null,
+      size: 0,
+      encoding: "utf-8",
+      error: `Failed to fetch file content for ${path}`,
     };
   }
 }
