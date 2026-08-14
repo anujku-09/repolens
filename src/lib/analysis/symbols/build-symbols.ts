@@ -324,20 +324,94 @@ export async function buildRepositorySymbols(
     }
   }
 
+  // Helper to identify framework entry points & config files that should not be flagged as unused exports
+  const isFrameworkEntryPoint = (filePath: string): boolean => {
+    const norm = filePath.replace(/\\/g, "/").toLowerCase();
+    if (
+      norm.endsWith("next.config.ts") ||
+      norm.endsWith("next.config.js") ||
+      norm.endsWith("next.config.mjs") ||
+      norm.endsWith("eslint.config.mjs") ||
+      norm.endsWith("eslint.config.js") ||
+      norm.endsWith("postcss.config.mjs") ||
+      norm.endsWith("postcss.config.js") ||
+      norm.endsWith("tailwind.config.js") ||
+      norm.endsWith("tailwind.config.ts") ||
+      norm.endsWith("package.json")
+    ) {
+      return true;
+    }
+    if (
+      norm.includes("/app/") ||
+      norm.startsWith("app/") ||
+      norm.includes("middleware")
+    ) {
+      if (
+        norm.endsWith("/page.tsx") ||
+        norm.endsWith("/page.jsx") ||
+        norm.endsWith("/page.ts") ||
+        norm.endsWith("/page.js") ||
+        norm.endsWith("/layout.tsx") ||
+        norm.endsWith("/layout.jsx") ||
+        norm.endsWith("/route.ts") ||
+        norm.endsWith("/route.js") ||
+        norm.endsWith("/loading.tsx") ||
+        norm.endsWith("/error.tsx") ||
+        norm.endsWith("/not-found.tsx") ||
+        norm.endsWith("/actions.ts") ||
+        norm.endsWith("middleware.ts") ||
+        norm.endsWith("middleware.js")
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   // 10. Compute Summary Statistics & Unused Export Detection
   const exportedSymbols = insertedSymbols.filter((s) => s.is_exported);
   const unusedExports: { symbol_name: string; defining_path: string; kind: SymbolKind }[] = [];
 
   exportedSymbols.forEach((sym) => {
+    const definingFile = idToFileMap.get(sym.defining_file_id);
+    const filePath = definingFile?.path || "";
+
+    if (filePath && isFrameworkEntryPoint(filePath)) {
+      return;
+    }
+
     const usages = symbolUsageCounts.get(sym.id) || 0;
     if (usages === 0) {
-      const definingFile = idToFileMap.get(sym.defining_file_id);
       unusedExports.push({
         symbol_name: sym.symbol_name,
-        defining_path: definingFile?.path || sym.defining_file_id,
+        defining_path: filePath || sym.defining_file_id,
         kind: sym.symbol_kind,
       });
     }
+  });
+
+  const allDefinedSymbols = insertedSymbols.map((s) => ({
+    symbol_name: s.symbol_name,
+    defining_path: idToFileMap.get(s.defining_file_id)?.path || "",
+    kind: s.symbol_kind,
+    is_exported: s.is_exported,
+  }));
+
+  const allExportedSymbols = exportedSymbols.map((s) => ({
+    symbol_name: s.symbol_name,
+    defining_path: idToFileMap.get(s.defining_file_id)?.path || "",
+    kind: s.symbol_kind,
+  }));
+
+  const allReferenceEdges = referenceInserts.map((r) => {
+    const sym = symbolIdMap.get(r.symbol_id);
+    const defFile = sym ? idToFileMap.get(sym.defining_file_id) : undefined;
+    const refFile = idToFileMap.get(r.referencing_file_id);
+    return {
+      symbol_name: sym?.symbol_name || "",
+      defining_path: defFile?.path || "",
+      referencing_path: refFile?.path || "",
+    };
   });
 
   const topUsedSymbols = Array.from(symbolUsageCounts.entries())
@@ -360,6 +434,9 @@ export async function buildRepositorySymbols(
     unusedExportsCount: unusedExports.length,
     topUsedSymbols,
     unusedExports,
+    allDefinedSymbols,
+    allExportedSymbols,
+    allReferenceEdges,
   };
 
   return {
@@ -413,19 +490,92 @@ export async function getRepositorySymbolSummary(
     usageCounts.set(r.symbol_id, (usageCounts.get(r.symbol_id) || 0) + 1);
   });
 
+  const isFrameworkEntryPoint = (filePath: string): boolean => {
+    const norm = filePath.replace(/\\/g, "/").toLowerCase();
+    if (
+      norm.endsWith("next.config.ts") ||
+      norm.endsWith("next.config.js") ||
+      norm.endsWith("next.config.mjs") ||
+      norm.endsWith("eslint.config.mjs") ||
+      norm.endsWith("eslint.config.js") ||
+      norm.endsWith("postcss.config.mjs") ||
+      norm.endsWith("postcss.config.js") ||
+      norm.endsWith("tailwind.config.js") ||
+      norm.endsWith("tailwind.config.ts") ||
+      norm.endsWith("package.json")
+    ) {
+      return true;
+    }
+    if (
+      norm.includes("/app/") ||
+      norm.startsWith("app/") ||
+      norm.includes("middleware")
+    ) {
+      if (
+        norm.endsWith("/page.tsx") ||
+        norm.endsWith("/page.jsx") ||
+        norm.endsWith("/page.ts") ||
+        norm.endsWith("/page.js") ||
+        norm.endsWith("/layout.tsx") ||
+        norm.endsWith("/layout.jsx") ||
+        norm.endsWith("/route.ts") ||
+        norm.endsWith("/route.js") ||
+        norm.endsWith("/loading.tsx") ||
+        norm.endsWith("/error.tsx") ||
+        norm.endsWith("/not-found.tsx") ||
+        norm.endsWith("/actions.ts") ||
+        norm.endsWith("middleware.ts") ||
+        norm.endsWith("middleware.js")
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const exportedSymbols = symbols.filter((s) => s.is_exported);
   const unusedExports: { symbol_name: string; defining_path: string; kind: SymbolKind }[] = [];
 
   exportedSymbols.forEach((sym) => {
+    const file = idToFileMap.get(sym.defining_file_id);
+    const filePath = file?.path || "";
+
+    if (filePath && isFrameworkEntryPoint(filePath)) {
+      return;
+    }
+
     const count = usageCounts.get(sym.id) || 0;
     if (count === 0) {
-      const file = idToFileMap.get(sym.defining_file_id);
       unusedExports.push({
         symbol_name: sym.symbol_name,
-        defining_path: file?.path || sym.defining_file_id,
+        defining_path: filePath || sym.defining_file_id,
         kind: sym.symbol_kind,
       });
     }
+  });
+
+  const allDefinedSymbols = symbols.map((s) => ({
+    symbol_name: s.symbol_name,
+    defining_path: idToFileMap.get(s.defining_file_id)?.path || "",
+    kind: s.symbol_kind,
+    is_exported: s.is_exported,
+  }));
+
+  const allExportedSymbols = exportedSymbols.map((s) => ({
+    symbol_name: s.symbol_name,
+    defining_path: idToFileMap.get(s.defining_file_id)?.path || "",
+    kind: s.symbol_kind,
+  }));
+
+  const allReferenceEdges = references.map((r) => {
+    const sym = symbols.find((s) => s.id === r.symbol_id);
+    const defFile = sym ? idToFileMap.get(sym.defining_file_id) : undefined;
+    const refFile = idToFileMap.get(r.referencing_file_id);
+    return {
+      symbol_name: sym?.symbol_name || "",
+      defining_path: defFile?.path || "",
+      referencing_path: refFile?.path || "",
+    };
   });
 
   const topUsedSymbols = Array.from(usageCounts.entries())
@@ -448,6 +598,9 @@ export async function getRepositorySymbolSummary(
     unusedExportsCount: unusedExports.length,
     topUsedSymbols,
     unusedExports,
+    allDefinedSymbols,
+    allExportedSymbols,
+    allReferenceEdges,
   };
 
   return {

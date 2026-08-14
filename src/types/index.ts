@@ -379,6 +379,9 @@ export interface SymbolGraphSummary {
   unusedExportsCount: number;
   topUsedSymbols: { symbol_name: string; defining_path: string; usages_count: number }[];
   unusedExports: { symbol_name: string; defining_path: string; kind: SymbolKind }[];
+  allDefinedSymbols?: { symbol_name: string; defining_path: string; kind: SymbolKind; is_exported: boolean }[];
+  allExportedSymbols?: { symbol_name: string; defining_path: string; kind: SymbolKind }[];
+  allReferenceEdges?: { symbol_name: string; defining_path: string; referencing_path: string }[];
 }
 
 export interface SymbolWithReferences extends RepositorySymbol {
