@@ -1,14 +1,11 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import {
   LayoutDashboard,
   GitFork,
   Code2,
   FolderTree,
-  Wrench,
-  Compass,
-  Bot,
 } from "lucide-react";
 
 interface RepositoryDashboardTabsProps {
@@ -27,6 +24,18 @@ export function RepositoryDashboardTabs({
   explorerContent,
 }: RepositoryDashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<RepositoryTab>("overview");
+
+  // Automatically switch tab to File Explorer when user clicks "Inspect File" anywhere in the app
+  useEffect(() => {
+    const handleInspectFile = () => {
+      setActiveTab("explorer");
+    };
+
+    window.addEventListener("repolens:inspect-file", handleInspectFile);
+    return () => {
+      window.removeEventListener("repolens:inspect-file", handleInspectFile);
+    };
+  }, []);
 
   return (
     <div className="w-full space-y-6 font-sans">
