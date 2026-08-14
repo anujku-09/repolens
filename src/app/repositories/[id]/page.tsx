@@ -268,8 +268,18 @@ export default async function RepositoryDetailsPage({
           dependencyContent={
             <>
               {/* Interactive Dependency Intelligence Metrics Card */}
-              {isGraphBuilt && serializedGraph.summary && (
+              {isGraphBuilt && serializedGraph.summary ? (
                 <DependencyMetricsCard summary={serializedGraph.summary} />
+              ) : (
+                <Card className="border-purple-500/30 bg-purple-500/5 p-5 mb-8 text-center font-mono">
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <GitFork className="h-8 w-8 text-purple-400 mb-2" />
+                    <h3 className="text-sm font-semibold text-zinc-200">Dependency Network Graph Pending</h3>
+                    <p className="text-xs text-zinc-400 max-w-md mt-1">
+                      Click &quot;Rebuild Dependency Graph&quot; in step 3 of the Pipeline Control bar on the Overview tab to extract all internal import links, external packages, and circular dependency loops across your repository.
+                    </p>
+                  </div>
+                </Card>
               )}
 
               {/* Codebase Dependency Network Visualizer */}
