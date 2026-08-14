@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, MouseEvent } from "react";
+import { useState, useMemo, useRef, useEffect, MouseEvent } from "react";
 import { SerializedGraphData } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,6 +21,8 @@ import {
   Filter,
   Columns,
   Circle,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 interface CodebaseVisualizerProps {
@@ -56,12 +58,46 @@ export function CodebaseVisualizer({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [showConnectedOnly, setShowConnectedOnly] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("concentric");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const nodes = graphData?.nodes || [];
   const edges = graphData?.edges || [];
   const summary = graphData?.summary || null;
+
+  // Listen to browser native fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  // Toggle native browser fullscreen / CSS fullscreen modal overlay
+  const toggleFullscreen = () => {
+    if (!wrapperRef.current) return;
+
+    if (!document.fullscreenElement) {
+      wrapperRef.current
+        .requestFullscreen()
+        .then(() => setIsFullscreen(true))
+        .catch((err) => {
+          console.warn("[Fullscreen API Error, falling back to CSS Overlay]:", err);
+          setIsFullscreen((prev) => !prev);
+        });
+    } else {
+      document
+        .exitFullscreen()
+        .then(() => setIsFullscreen(false))
+        .catch(() => setIsFullscreen(false));
+    }
+  };
 
   // Filter nodes based on search query & connected-only toggle
   const filteredNodes = useMemo(() => {
@@ -282,9 +318,16 @@ export function CodebaseVisualizer({
   const hoveredNode = hoveredNodeId ? layoutNodes.find((n) => n.id === hoveredNodeId) : null;
 
   return (
-    <div className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden font-sans">
+    <div
+      ref={wrapperRef}
+      className={
+        isFullscreen
+          ? "fixed inset-0 z-50 bg-zinc-950 w-screen h-screen rounded-none border-0 overflow-hidden flex flex-col font-sans"
+          : "w-full rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden font-sans transition-all duration-200"
+      }
+    >
       {/* Top Header Control Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-b border-zinc-800/80 bg-zinc-900/90 px-4 py-3 gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-b border-zinc-800/80 bg-zinc-900/90 px-4 py-3 gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
             <div className="h-3 w-3 rounded-full bg-rose-500/80" />
@@ -312,11 +355,31 @@ export function CodebaseVisualizer({
               <span>{summary.circularDependencyCount} Cycles</span>
             </Badge>
           )}
+
+          {/* Full Screen Mode Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-mono text-xs font-semibold transition-colors cursor-pointer ml-1"
+            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Enter Fullscreen Mode"}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="h-3.5 w-3.5" />
+                <span>Exit Fullscreen</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span>Fullscreen Canvas</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
       {/* Main Graph Canvas & Inspector Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[540px]">
+      <div className={`grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-hidden ${isFullscreen ? "h-[calc(100vh-57px)]" : "min-h-[540px]"}`}>
         {/* Left Interactive SVG Canvas */}
         <div
           ref={containerRef}
@@ -424,7 +487,7 @@ export function CodebaseVisualizer({
           <div className="flex-1 min-h-[460px] flex items-center justify-center overflow-hidden relative select-none">
             <svg
               viewBox={viewBoxString}
-              className="w-full h-full max-h-[520px] transition-transform duration-75 ease-out"
+              className="w-full h-full transition-transform duration-75 ease-out"
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`,
               }}
@@ -616,7 +679,7 @@ export function CodebaseVisualizer({
         </div>
 
         {/* Right Inspector Pane: Selected Node Dependency Details */}
-        <div className="lg:col-span-4 bg-zinc-900/40 p-4 md:p-5 flex flex-col justify-between font-mono text-xs">
+        <div className="lg:col-span-4 bg-zinc-900/40 p-4 md:p-5 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           {selectedNode ? (
             <div className="space-y-4">
               <div className="border-b border-zinc-800 pb-3">
