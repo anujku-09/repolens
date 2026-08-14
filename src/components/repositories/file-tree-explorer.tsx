@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   RepositoryFile,
   RepositoryFileAnalysis,
@@ -134,6 +134,66 @@ export function FileTreeExplorer({
 
   const selectedAnalysis = selectedFile ? analysisMap.get(selectedFile.id) : null;
 
+  // Global Event Listener for "Inspect File" clicks from any metric card/modal
+  useEffect(() => {
+    const handleInspectEvent = async (e: Event) => {
+      const customEvt = e as CustomEvent<{ filePath: string }>;
+      const targetPath = customEvt.detail?.filePath;
+      if (!targetPath) return;
+
+      const targetFile = files.find(
+        (f) => f.path === targetPath || f.path.endsWith(targetPath)
+      );
+      if (!targetFile) return;
+
+      // 1. Expand all parent directories leading to this target file
+      const pathParts = targetFile.path.split("/");
+      setExpandedPaths((prev) => {
+        const next = new Set(prev);
+        let currentPath = "";
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          currentPath = currentPath ? `${currentPath}/${pathParts[i]}` : pathParts[i];
+          next.add(currentPath);
+        }
+        return next;
+      });
+
+      // 2. Highlight/Select file
+      setSelectedFile(targetFile);
+
+      // 3. Scroll to file tree section
+      const section = document.getElementById("file-tree-explorer-section");
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
+
+      // 4. Fetch and open source code content viewer modal directly
+      setIsViewerOpen(true);
+      setIsFetchingSource(true);
+      setSourceError(null);
+      setSourceCode(null);
+
+      try {
+        const res = await getFileSourceAction(targetFile.id);
+        if (res.error || res.content === null) {
+          setSourceError(res.error || "Source code content unavailable.");
+        } else {
+          setSourceCode(res.content);
+        }
+      } catch (err) {
+        console.error("[handleInspectEvent Error]:", err);
+        setSourceError("Failed to fetch source code content.");
+      } finally {
+        setIsFetchingSource(false);
+      }
+    };
+
+    window.addEventListener("repolens:inspect-file", handleInspectEvent);
+    return () => {
+      window.removeEventListener("repolens:inspect-file", handleInspectEvent);
+    };
+  }, [files]);
+
   const selectedGraphNode: GraphNode | null = useMemo(() => {
     if (!selectedFile || !graphData?.nodes) return null;
     return (
@@ -259,7 +319,7 @@ export function FileTreeExplorer({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div id="file-tree-explorer-section" className="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-6">
       {/* Left Column: Repository Tree Navigator */}
       <Card className="lg:col-span-7 border-zinc-800 bg-zinc-900/50 p-4 sm:p-5 flex flex-col justify-between">
         <div>

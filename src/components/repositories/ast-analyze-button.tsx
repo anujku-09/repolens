@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeRepositoryAction } from "@/app/repositories/actions";
 import { RepositoryAnalysisSummary } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Cpu, Loader2, RefreshCw, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import {
+  Cpu,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Info,
+} from "lucide-react";
 
 interface AstAnalyzeButtonProps {
   repositoryId: string;
@@ -19,49 +26,44 @@ export function AstAnalyzeButton({
   disabled = false,
 }: AstAnalyzeButtonProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<RepositoryAnalysisSummary | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
-    setErrorMessage(null);
-    setSummary(null);
     setIsLoading(true);
+    setErrorMessage(null);
 
-    try {
-      const result = await analyzeRepositoryAction(repositoryId);
-
-      if (!result.success) {
-        setErrorMessage(
-          result.error || "AST code structure analysis failed. Check your Supabase database table."
-        );
-      } else {
-        if (result.summary) {
-          setSummary(result.summary);
+    startTransition(async () => {
+      try {
+        const res = await analyzeRepositoryAction(repositoryId);
+        if (res.error) {
+          setErrorMessage(res.error);
+        } else if (res.summary) {
+          setSummary(res.summary);
+          router.refresh();
         }
-        router.refresh();
+      } catch (err) {
+        console.error("[handleAnalyze Error]:", err);
+        setErrorMessage("Failed to analyze repository AST structure.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("[AstAnalyzeButton Exception]:", err);
-      setErrorMessage(
-        err instanceof Error ? err.message : "An unexpected error occurred during AST analysis."
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
     <div className="space-y-3">
       <Button
         onClick={handleAnalyze}
-        disabled={isLoading || disabled}
+        disabled={isLoading || isPending || disabled}
         className="w-full justify-center bg-sky-500 hover:bg-sky-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
       >
-        {isLoading ? (
+        {isLoading || isPending ? (
           <>
             <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-            <span>Analyzing Code...</span>
+            <span>Analyzing AST...</span>
           </>
         ) : isAnalyzed ? (
           <>
@@ -78,13 +80,13 @@ export function AstAnalyzeButton({
 
       {/* Summary Feedback Banner */}
       {summary && (
-        <div className="space-y-2 rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-300 font-mono">
+        <div className="flex flex-col justify-between min-h-[120px] rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-300 font-mono">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-sky-400" />
             <p className="font-semibold text-zinc-100">AST Analysis Complete!</p>
           </div>
 
-          <div className="flex flex-col gap-1 text-[11px] text-zinc-300 pt-1 border-t border-sky-500/20 font-mono">
+          <div className="flex flex-col gap-1 text-[11px] text-zinc-300 pt-1.5 border-t border-sky-500/20 font-mono">
             <div className="flex items-center justify-between">
               <span>Analyzed Files:</span>
               <strong className="text-sky-400">{summary.analyzedFiles}</strong>

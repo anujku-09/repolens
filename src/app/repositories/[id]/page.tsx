@@ -197,9 +197,9 @@ export default async function RepositoryDetailsPage({
 
         {/* Pipeline Control Grid (Source, AST, Graph, Symbols & Architecture Score) */}
         {isIndexed && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 items-stretch mb-8">
             {/* Source Ingestion Card */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -231,7 +231,7 @@ export default async function RepositoryDetailsPage({
             </Card>
 
             {/* AST Structural Analysis Card */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -263,7 +263,7 @@ export default async function RepositoryDetailsPage({
             </Card>
 
             {/* Dependency Graph Builder Card */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -295,7 +295,7 @@ export default async function RepositoryDetailsPage({
             </Card>
 
             {/* Symbol Resolution Card (Feature 8A) */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -327,7 +327,7 @@ export default async function RepositoryDetailsPage({
             </Card>
 
             {/* Architecture Score Card (Feature 8B) */}
-            <Card className="border-zinc-800 bg-zinc-900/50 p-4 flex flex-col justify-between">
+            <Card className="border-zinc-800 bg-zinc-900/50 p-4 h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">

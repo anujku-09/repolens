@@ -78,13 +78,25 @@ export function ArchitectureScoreButton({
 
       {/* Summary Feedback Banner */}
       {scoreResult && (
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 font-mono space-y-1">
+        <div className="flex flex-col justify-between min-h-[120px] rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 font-mono">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-            <p className="font-semibold text-zinc-100">
-              Architecture Evaluated! Overall Health Score:{" "}
-              <strong className="text-emerald-400 font-bold text-sm">{scoreResult.health_score}/100</strong>
-            </p>
+            <p className="font-semibold text-zinc-100">Architecture Evaluated!</p>
+          </div>
+
+          <div className="flex flex-col gap-1 text-[11px] text-zinc-300 pt-1.5 border-t border-emerald-500/20 font-mono">
+            <div className="flex items-center justify-between">
+              <span>Overall Health Score:</span>
+              <strong className="text-emerald-400 font-bold">{scoreResult.health_score} / 100</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Modularity Score:</span>
+              <strong className="text-purple-400">{scoreResult.modularity_score} / 100</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Instability Index (I):</span>
+              <strong className="text-amber-400">{scoreResult.instability_index || 0.5}</strong>
+            </div>
           </div>
         </div>
       )}

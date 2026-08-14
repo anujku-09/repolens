@@ -44,10 +44,13 @@ export function SymbolIntelligenceCard({
     setActiveModal(null);
     if (onSelectFilePath) {
       onSelectFilePath(path);
-    } else {
-      // Smooth scroll to file tree explorer
-      const el = document.getElementById("file-tree-explorer-section");
-      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("repolens:inspect-file", {
+          detail: { filePath: path },
+        })
+      );
     }
   };
 

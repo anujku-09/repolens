@@ -79,14 +79,24 @@ export function SourceIngestButton({
 
       {/* Summary Feedback Banner */}
       {summary && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 font-mono">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
-          <div>
-            <p className="font-semibold text-zinc-100">Source Code Ingested Successfully!</p>
-            <div className="flex flex-wrap gap-3 text-[11px] text-zinc-300 mt-1">
-              <span>Ingested: <strong>{summary.ingestedFiles}</strong> files</span>
-              <span>Skipped: <strong>{summary.skippedFiles}</strong> files</span>
-              <span>Total Size: <strong>{formatBytes(summary.totalBytes)}</strong></span>
+        <div className="flex flex-col justify-between min-h-[120px] rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 font-mono">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <p className="font-semibold text-zinc-100">Source Ingested Successfully!</p>
+          </div>
+
+          <div className="flex flex-col gap-1 text-[11px] text-zinc-300 pt-1.5 border-t border-emerald-500/20">
+            <div className="flex items-center justify-between">
+              <span>Ingested Files:</span>
+              <strong className="text-emerald-400">{summary.ingestedFiles}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Skipped Files:</span>
+              <strong className="text-zinc-400">{summary.skippedFiles}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Total Code Size:</span>
+              <strong className="text-emerald-300">{formatBytes(summary.totalBytes)}</strong>
             </div>
           </div>
         </div>
