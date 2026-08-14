@@ -100,7 +100,7 @@ export default async function RepositoryDetailsPage({
     .sort((a, b) => b.bytes - a.bytes);
 
   const status = repository.status || "connected";
-  const isIndexed = status === "indexed";
+  const isIndexed = status === "indexed" || files.length > 0;
   const isIndexing = status === "indexing";
   const isSourceIngested = sourceCount > 0;
   const isAstAnalyzed = Boolean(astSummary && astSummary.analyzedFiles > 0);
@@ -129,17 +129,17 @@ export default async function RepositoryDetailsPage({
               </h1>
 
               {/* Status Badges */}
-              {status === "indexed" && (
+              {isIndexed && (
                 <Badge variant="emerald" className="font-mono text-xs">
                   File Tree Indexed
                 </Badge>
               )}
-              {status === "indexing" && (
+              {isIndexing && (
                 <Badge variant="amber" className="font-mono text-xs animate-pulse">
                   Indexing Tree...
                 </Badge>
               )}
-              {status === "connected" && (
+              {!isIndexed && status === "connected" && (
                 <Badge variant="mono" className="font-mono text-xs text-zinc-400">
                   Connected
                 </Badge>
