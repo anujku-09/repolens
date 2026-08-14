@@ -59,14 +59,9 @@ export function AIIntelligenceCard({
             <Bot className="h-5 w-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-zinc-100">
-                AI Codebase Intelligence & Context Payload Generator
-              </h3>
-              <span className="rounded bg-cyan-500/20 border border-cyan-500/30 px-2 py-0.5 text-[10px] font-mono text-cyan-300 font-bold">
-                Feature 11
-              </span>
-            </div>
+            <h3 className="text-sm font-semibold text-zinc-100">
+              AI Codebase Intelligence & Context Payload Generator
+            </h3>
             <p className="text-xs text-zinc-400 mt-0.5 font-mono">
               Generates noise-free, AST-verified structural graph payloads for ChatGPT, Claude & Cursor.
             </p>

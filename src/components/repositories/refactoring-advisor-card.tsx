@@ -79,14 +79,9 @@ export function RefactoringAdvisorCard({ repositoryId }: RefactoringAdvisorCardP
             <Wrench className="h-5 w-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-zinc-100">
-                Architecture & Refactoring Advisor
-              </h3>
-              <span className="rounded bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 text-[10px] font-mono text-purple-300 font-bold">
-                Feature 13
-              </span>
-            </div>
+            <h3 className="text-base font-bold text-zinc-100">
+              Architecture & Refactoring Advisor
+            </h3>
             <p className="text-xs text-zinc-400 mt-0.5 font-mono">
               Answers &quot;What should I refactor first?&quot; by ranking high-impact architecture debt & coupling risks.
             </p>

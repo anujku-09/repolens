@@ -80,14 +80,9 @@ export function GuidedOnboardingTour({
               <Compass className="h-6 w-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-zinc-100">
-                  5-Minute Guided Repository Onboarding Tour
-                </h3>
-                <span className="rounded bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-mono text-indigo-300 font-bold">
-                  Feature 12
-                </span>
-              </div>
+              <h3 className="text-base font-bold text-zinc-100">
+                5-Minute Guided Repository Onboarding Tour
+              </h3>
               <p className="text-xs text-zinc-400 mt-0.5 font-mono">
                 Answers &quot;Where should I start?&quot; with a 6-step interactive tour of core hubs, entry points, & schemas.
               </p>
