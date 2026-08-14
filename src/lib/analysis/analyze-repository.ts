@@ -8,6 +8,7 @@ const CONCURRENCY_LIMIT = 5;
 export interface GetRepositoryAnalysisResult {
   analysisMap: Map<string, RepositoryFileAnalysis>;
   summary: RepositoryAnalysisSummary | null;
+  error?: string | null;
 }
 
 /**
@@ -30,7 +31,12 @@ export async function getRepositoryAnalysisMap(
     .select("*")
     .eq("repository_id", repositoryId);
 
-  if (error || !data) {
+  if (error) {
+    console.error("[getRepositoryAnalysisMap Error]:", error);
+    return { analysisMap: new Map(), summary: null, error: error.message };
+  }
+
+  if (!data) {
     return { analysisMap: new Map(), summary: null };
   }
 
@@ -125,19 +131,34 @@ export async function analyzeRepository(
   }
 
   const candidateFileIds = contentsData.map((row) => row.repository_file_id);
+  const fileErrors: string[] = [];
 
   // Process candidate files in batches with a bounded concurrency limit of 5
   for (let i = 0; i < candidateFileIds.length; i += CONCURRENCY_LIMIT) {
     const chunk = candidateFileIds.slice(i, i + CONCURRENCY_LIMIT);
-    await Promise.all(chunk.map((fileId) => analyzeRepositoryFile(fileId)));
+    const results = await Promise.all(chunk.map((fileId) => analyzeRepositoryFile(fileId)));
+
+    results.forEach((r) => {
+      if (!r.success && r.error) {
+        fileErrors.push(r.error);
+      }
+    });
   }
 
   // Fetch updated aggregated analysis metrics
-  const { summary } = await getRepositoryAnalysisMap(repositoryId);
+  const { summary, error: summaryError } = await getRepositoryAnalysisMap(repositoryId);
+
+  if (summaryError || !summary) {
+    const dbError = summaryError || (fileErrors.length > 0 ? fileErrors[0] : "Database error");
+    return {
+      success: false,
+      error: `Failed to retrieve analysis records: ${dbError}. Make sure the SQL migration for 'public.repository_file_analysis' has been run in Supabase.`,
+    };
+  }
 
   return {
     success: true,
-    summary: summary || undefined,
+    summary,
     error: null,
   };
 }
