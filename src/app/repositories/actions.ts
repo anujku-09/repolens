@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createRepository, getRepositories, deleteRepository } from "@/lib/repositories";
 import { ingestRepositoryTree } from "@/lib/repositories/files";
 import { ingestRepositorySource } from "@/lib/ingestion/source";
+import { analyzeRepository } from "@/lib/analysis/analyze-repository";
 import { GitHubRepo, CreateRepositoryInput } from "@/types";
 
 /**
@@ -82,6 +83,23 @@ export async function ingestRepositorySourceAction(repositoryId: string) {
   }
 
   const result = await ingestRepositorySource(repositoryId);
+
+  revalidatePath("/repositories");
+  revalidatePath(`/repositories/${repositoryId}`);
+  revalidatePath("/dashboard");
+
+  return result;
+}
+
+/**
+ * Server Action: Run AST Structural Analysis on Ingested Source Code Files.
+ */
+export async function analyzeRepositoryAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+
+  const result = await analyzeRepository(repositoryId);
 
   revalidatePath("/repositories");
   revalidatePath(`/repositories/${repositoryId}`);

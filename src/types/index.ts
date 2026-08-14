@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion & Source Code Ingestion.
+ * Shared TypeScript domain models for RepoLens database persistence, GitHub discovery, File Ingestion, Source Code Ingestion & AST Structural Analysis.
  */
 
 export interface Profile {
@@ -169,4 +169,92 @@ export interface SourceIngestionSummary {
   failedFiles: number;
   totalBytes: number;
   languages: Record<string, number>;
+}
+
+/**
+ * AST Structural Analysis Types
+ */
+export interface AstImport {
+  source: string;
+  defaultImport: string | null;
+  namespaceImport: string | null;
+  namedImports: string[];
+}
+
+export interface AstExport {
+  name: string;
+  default: boolean;
+}
+
+export interface AstFunction {
+  name: string;
+  async: boolean;
+  exported: boolean;
+  startLine: number;
+  endLine: number;
+}
+
+export interface AstClass {
+  name: string;
+  exported: boolean;
+  startLine: number;
+  endLine: number;
+}
+
+export interface AstVariable {
+  name: string;
+  exported: boolean;
+}
+
+export interface AstComponent {
+  name: string;
+  startLine: number;
+  endLine: number;
+  heuristic: boolean;
+}
+
+export interface FileAnalysisPayload {
+  imports: AstImport[];
+  exports: AstExport[];
+  functions: AstFunction[];
+  classes: AstClass[];
+  variables: AstVariable[];
+  components: AstComponent[];
+}
+
+export type AnalysisStatus = "analyzed" | "unsupported" | "failed";
+
+export interface RepositoryFileAnalysis {
+  id: string;
+  repository_file_id: string;
+  repository_id: string;
+  user_id: string;
+  language: string;
+  parser: string;
+  parser_version: string | null;
+  analysis: FileAnalysisPayload;
+  imports_count: number;
+  exports_count: number;
+  functions_count: number;
+  classes_count: number;
+  variables_count: number;
+  components_count: number;
+  status: AnalysisStatus;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RepositoryAnalysisSummary {
+  totalSourceFiles: number;
+  analyzedFiles: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+  imports: number;
+  exports: number;
+  functions: number;
+  classes: number;
+  variables: number;
+  components: number;
+  unsupportedLanguages: string[];
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { RepositoryFile } from "@/types";
+import { RepositoryFile, RepositoryFileAnalysis } from "@/types";
 import { isAnalyzableSourceFile } from "@/lib/ingestion/source-policy";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,11 +22,14 @@ import {
   Info,
   CheckCircle2,
   XCircle,
+  Cpu,
+  AlertCircle,
 } from "lucide-react";
 
 interface FileTreeExplorerProps {
   files: RepositoryFile[];
   ingestedFileIds?: Set<string>;
+  analysisMap?: Map<string, RepositoryFileAnalysis>;
 }
 
 interface TreeNode {
@@ -80,7 +83,11 @@ function getFileIcon(file: RepositoryFile) {
   return <File className="h-4 w-4 text-zinc-400 shrink-0" />;
 }
 
-export function FileTreeExplorer({ files, ingestedFileIds = new Set() }: FileTreeExplorerProps) {
+export function FileTreeExplorer({
+  files,
+  ingestedFileIds = new Set(),
+  analysisMap = new Map(),
+}: FileTreeExplorerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set([""]));
   const [selectedFile, setSelectedFile] = useState<RepositoryFile | null>(null);
@@ -156,6 +163,7 @@ export function FileTreeExplorer({ files, ingestedFileIds = new Set() }: FileTre
     const isExpanded = expandedPaths.has(file.path);
     const isSelected = selectedFile?.id === file.id;
     const isSourceIngested = ingestedFileIds.has(file.id);
+    const analysis = analysisMap.get(file.id);
 
     return (
       <div key={file.id} className="select-none font-mono text-xs">
@@ -206,7 +214,10 @@ export function FileTreeExplorer({ files, ingestedFileIds = new Set() }: FileTre
             <span className="truncate">{file.name}</span>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 text-[11px] text-zinc-500">
+          <div className="flex items-center gap-2 shrink-0 text-[11px] text-zinc-500">
+            {analysis?.status === "analyzed" && (
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-400" title="AST Structure Analyzed" />
+            )}
             {isSourceIngested && (
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" title="Source Content Indexed" />
             )}
@@ -242,6 +253,8 @@ export function FileTreeExplorer({ files, ingestedFileIds = new Set() }: FileTre
       </Card>
     );
   }
+
+  const selectedAnalysis = selectedFile ? analysisMap.get(selectedFile.id) : undefined;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -376,6 +389,64 @@ export function FileTreeExplorer({ files, ingestedFileIds = new Set() }: FileTre
                 </div>
               </div>
 
+              {/* AST Analysis Status & Structural Facts Breakdown */}
+              <div>
+                <label className="text-[11px] text-zinc-500 uppercase tracking-wider">
+                  AST Structural Facts
+                </label>
+                <div className="mt-1">
+                  {selectedAnalysis?.status === "analyzed" ? (
+                    <div className="space-y-2">
+                      <Badge variant="emerald" className="gap-1 font-mono text-[11px]">
+                        <Cpu className="h-3 w-3 text-sky-400" />
+                        <span>AST: Analyzed</span>
+                      </Badge>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px] bg-zinc-950 p-2.5 rounded border border-zinc-800/80">
+                        <div>
+                          <span className="text-zinc-500">Imports:</span>{" "}
+                          <strong className="text-zinc-200">{selectedAnalysis.imports_count}</strong>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Exports:</span>{" "}
+                          <strong className="text-zinc-200">{selectedAnalysis.exports_count}</strong>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Functions:</span>{" "}
+                          <strong className="text-emerald-400">{selectedAnalysis.functions_count}</strong>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Classes:</span>{" "}
+                          <strong className="text-purple-400">{selectedAnalysis.classes_count}</strong>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Variables:</span>{" "}
+                          <strong className="text-zinc-300">{selectedAnalysis.variables_count}</strong>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Components:</span>{" "}
+                          <strong className="text-amber-400">{selectedAnalysis.components_count}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : selectedAnalysis?.status === "unsupported" ? (
+                    <Badge variant="mono" className="gap-1 font-mono text-[11px] text-zinc-400">
+                      <Info className="h-3 w-3 text-zinc-500" />
+                      <span>AST: Unsupported ({selectedFile.language || "Format"})</span>
+                    </Badge>
+                  ) : selectedAnalysis?.status === "failed" ? (
+                    <Badge variant="rose" className="gap-1 font-mono text-[11px]">
+                      <AlertCircle className="h-3 w-3" />
+                      <span>AST: Failed Parse</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="gap-1 font-mono text-[11px] text-zinc-500">
+                      <span>AST: Pending Analysis</span>
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-zinc-800/60">
                 <div>
                   <label className="text-[11px] text-zinc-500">Type</label>
@@ -426,7 +497,7 @@ export function FileTreeExplorer({ files, ingestedFileIds = new Set() }: FileTre
         <div className="mt-6 flex items-start gap-2 rounded bg-zinc-950 p-3 text-[11px] text-zinc-400 border border-zinc-800">
           <Info className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
           <span>
-            Source code ingestion persists raw UTF-8 content in PostgreSQL. AST parsing &amp; dependency extraction will be enabled in Feature 6.
+            AST analysis extracts structural facts (imports, exports, functions, classes, components) using the TypeScript Compiler API. Dependency graphs will be enabled in Feature 7.
           </span>
         </div>
       </Card>

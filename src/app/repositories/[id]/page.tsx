@@ -4,10 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getRepositoryById } from "@/lib/repositories";
 import { getRepositoryFiles } from "@/lib/repositories/files";
 import { getRepositoryFileContentsSummary } from "@/lib/ingestion/source";
+import { getRepositoryAnalysisMap } from "@/lib/analysis/analyze-repository";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { IngestButton } from "@/components/repositories/ingest-button";
 import { SourceIngestButton } from "@/components/repositories/source-ingest-button";
+import { AstAnalyzeButton } from "@/components/repositories/ast-analyze-button";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +24,11 @@ import {
   Database,
   CheckCircle2,
   FileCode,
+  Cpu,
+  Boxes,
+  FunctionSquare,
+  Component,
+  Info,
 } from "lucide-react";
 
 function formatBytes(bytes: number): string {
@@ -63,6 +70,9 @@ export default async function RepositoryDetailsPage({
   const { count: sourceCount, totalBytes: sourceBytes, ingestedFileIds } =
     await getRepositoryFileContentsSummary(repoId);
 
+  // Fetch real AST analysis data from public.repository_file_analysis
+  const { analysisMap, summary: astSummary } = await getRepositoryAnalysisMap(repoId);
+
   // Compute stats dynamically from stored repository_files
   const totalFiles = files.filter((f) => f.type === "file").length;
   const totalDirectories = files.filter((f) => f.type === "directory").length;
@@ -93,6 +103,7 @@ export default async function RepositoryDetailsPage({
   const isIndexed = status === "indexed";
   const isIndexing = status === "indexing";
   const isSourceIngested = sourceCount > 0;
+  const isAstAnalyzed = Boolean(astSummary && astSummary.analyzedFiles > 0);
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 font-sans">
@@ -117,7 +128,7 @@ export default async function RepositoryDetailsPage({
                 {repository.full_name}
               </h1>
 
-              {/* Real Status Badge */}
+              {/* Status Badges */}
               {status === "indexed" && (
                 <Badge variant="emerald" className="font-mono text-xs">
                   File Tree Indexed
@@ -133,16 +144,18 @@ export default async function RepositoryDetailsPage({
                   Connected
                 </Badge>
               )}
-              {status === "failed" && (
-                <Badge variant="rose" className="font-mono text-xs">
-                  Indexing Failed
-                </Badge>
-              )}
 
               {isSourceIngested && (
                 <Badge variant="emerald" className="font-mono text-xs gap-1">
                   <CheckCircle2 className="h-3 w-3" />
-                  <span>Source Indexed ({sourceCount} files)</span>
+                  <span>Source Ingested</span>
+                </Badge>
+              )}
+
+              {isAstAnalyzed && (
+                <Badge variant="emerald" className="font-mono text-xs gap-1">
+                  <Cpu className="h-3 w-3" />
+                  <span>AST Analyzed</span>
                 </Badge>
               )}
             </div>
@@ -175,7 +188,7 @@ export default async function RepositoryDetailsPage({
           </div>
         </div>
 
-        {/* Unindexed / Connected CTA Notice */}
+        {/* Unindexed CTA Notice */}
         {!isIndexed && status !== "indexing" && (
           <Card className="border-emerald-500/30 bg-emerald-500/10 p-5 mb-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -194,41 +207,73 @@ export default async function RepositoryDetailsPage({
           </Card>
         )}
 
-        {/* Dedicated Source Code Ingestion Section */}
+        {/* Pipeline Control Grid (Source Ingestion & AST Analysis) */}
         {isIndexed && (
-          <Card className="border-zinc-800 bg-zinc-900/50 p-6 mb-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Source Ingestion Card */}
+            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-2">
-                  <FileCode className="h-5 w-5 text-emerald-400" />
-                  <h3 className="text-base font-semibold text-zinc-100">Source Code Ingestion</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="h-4 w-4 text-emerald-400" />
+                    <h3 className="text-sm font-semibold text-zinc-100">1. Source Code Ingestion</h3>
+                  </div>
                   {isSourceIngested ? (
-                    <Badge variant="emerald" className="font-mono text-xs">
-                      Source Code Indexed
+                    <Badge variant="emerald" className="font-mono text-[10px]">
+                      Indexed ({sourceCount} files)
                     </Badge>
                   ) : (
-                    <Badge variant="mono" className="font-mono text-xs text-zinc-400">
-                      Not Ingested
+                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
+                      Pending
                     </Badge>
                   )}
                 </div>
-
-                <p className="text-xs text-zinc-400 mt-1 max-w-xl">
-                  {isSourceIngested
-                    ? `Successfully ingested ${sourceCount} source files (${formatBytes(sourceBytes)} total). Source contents are stored in database.`
-                    : "Fetch and store actual source code contents for TypeScript, Python, Go, and configuration files to prepare for AST analysis."}
+                <p className="text-xs text-zinc-400 mt-2">
+                  Fetch raw UTF-8 file contents from GitHub Contents API for TypeScript, Python, and configuration files.
                 </p>
               </div>
 
-              <div className="shrink-0">
+              <div className="mt-4 pt-3 border-t border-zinc-800/80">
                 <SourceIngestButton
                   repositoryId={repository.id}
                   isIngested={isSourceIngested}
                   disabled={!isIndexed}
                 />
               </div>
-            </div>
-          </Card>
+            </Card>
+
+            {/* AST Structural Analysis Card */}
+            <Card className="border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="h-4 w-4 text-sky-400" />
+                    <h3 className="text-sm font-semibold text-zinc-100">2. AST Structural Analysis</h3>
+                  </div>
+                  {isAstAnalyzed ? (
+                    <Badge variant="emerald" className="font-mono text-[10px]">
+                      Analyzed ({astSummary?.analyzedFiles} files)
+                    </Badge>
+                  ) : (
+                    <Badge variant="mono" className="font-mono text-[10px] text-zinc-500">
+                      Pending Source
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-400 mt-2">
+                  Extract deterministic structural facts (Imports, Exports, Functions, Classes, React Components) via TypeScript Compiler AST.
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-zinc-800/80">
+                <AstAnalyzeButton
+                  repositoryId={repository.id}
+                  isAnalyzed={isAstAnalyzed}
+                  disabled={!isSourceIngested}
+                />
+              </div>
+            </Card>
+          </div>
         )}
 
         {/* Real Ingestion Statistics Grid */}
@@ -282,6 +327,58 @@ export default async function RepositoryDetailsPage({
           </Card>
         </div>
 
+        {/* Real Extracted AST Facts Summary Grid */}
+        {isAstAnalyzed && astSummary && (
+          <Card className="border-zinc-800 bg-zinc-900/40 p-5 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-sky-400" />
+                <h3 className="text-sm font-semibold text-zinc-100">
+                  Extracted Code Structure Metrics
+                </h3>
+              </div>
+              {astSummary.unsupportedLanguages.length > 0 && (
+                <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  <Info className="h-3 w-3" />
+                  <span>{astSummary.unsupportedLanguages.join(", ")}: AST parser not available yet</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 font-mono">
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
+                <span className="text-[11px] text-zinc-500 uppercase">Analyzed Files</span>
+                <p className="text-lg font-bold text-sky-400 mt-0.5">{astSummary.analyzedFiles}</p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
+                <span className="text-[11px] text-zinc-500 uppercase">Imports</span>
+                <p className="text-lg font-bold text-zinc-200 mt-0.5">{astSummary.imports}</p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
+                <span className="text-[11px] text-zinc-500 uppercase">Exports</span>
+                <p className="text-lg font-bold text-zinc-200 mt-0.5">{astSummary.exports}</p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
+                <span className="text-[11px] text-zinc-500 uppercase">Functions</span>
+                <p className="text-lg font-bold text-emerald-400 mt-0.5">{astSummary.functions}</p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
+                <span className="text-[11px] text-zinc-500 uppercase">Classes</span>
+                <p className="text-lg font-bold text-purple-400 mt-0.5">{astSummary.classes}</p>
+              </div>
+
+              <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80">
+                <span className="text-[11px] text-zinc-500 uppercase">React Components</span>
+                <p className="text-lg font-bold text-amber-400 mt-0.5">{astSummary.components}</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Primary Languages Breakdown */}
         {languageList.length > 0 && (
           <Card className="border-zinc-800 bg-zinc-900/40 p-5 mb-8">
@@ -330,7 +427,11 @@ export default async function RepositoryDetailsPage({
         )}
 
         {/* Interactive File Tree Explorer Component */}
-        <FileTreeExplorer files={files} ingestedFileIds={ingestedFileIds} />
+        <FileTreeExplorer
+          files={files}
+          ingestedFileIds={ingestedFileIds}
+          analysisMap={analysisMap}
+        />
       </main>
       <Footer />
     </div>
