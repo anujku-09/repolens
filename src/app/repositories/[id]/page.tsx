@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getOrCreateProfile } from "@/lib/profiles";
 import { getRepositoryById } from "@/lib/repositories";
 import { getRepositoryFiles } from "@/lib/repositories/files";
 import { getRepositoryFileContentsSummary } from "@/lib/ingestion/source";
@@ -60,6 +61,9 @@ export default async function RepositoryDetailsPage({
     redirect("/login");
   }
 
+  // Fetch or auto-create user profile in public.profiles
+  const { profile } = await getOrCreateProfile();
+
   // Fetch real repository from database (RLS ensures user ownership)
   const repository = await getRepositoryById(repoId);
 
@@ -117,7 +121,7 @@ export default async function RepositoryDetailsPage({
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 font-sans">
-      <Navbar user={user} />
+      <Navbar user={user} profile={profile} />
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
         {/* Navigation Breadcrumb */}
         <div className="mb-6">

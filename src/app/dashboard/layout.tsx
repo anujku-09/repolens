@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOrCreateProfile } from "@/lib/profiles";
 import { Navbar } from "@/components/shared/navbar";
 
 export default async function DashboardLayout({
@@ -17,9 +18,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const { profile } = await getOrCreateProfile();
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 font-sans">
-      <Navbar user={user} />
+      <Navbar user={user} profile={profile} />
       <div className="flex-1">{children}</div>
     </div>
   );

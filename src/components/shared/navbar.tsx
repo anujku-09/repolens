@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { User } from "@supabase/supabase-js";
+import { Profile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogoutButton } from "@/components/shared/logout-button";
@@ -8,9 +9,13 @@ import { GithubIcon } from "@/components/ui/icons";
 
 interface NavbarProps {
   user?: User | null;
+  profile?: Profile | null;
 }
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar({ user, profile }: NavbarProps) {
+  const username = profile?.username || (user?.email ? user.email.split("@")[0] : null);
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || null;
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -51,15 +56,27 @@ export function Navbar({ user }: NavbarProps) {
           </Link>
         </nav>
 
-        {/* Action CTAs / User Auth Status */}
+        {/* Action CTAs / User Profile Status */}
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
-              {/* Authenticated User Email Badge */}
-              <Badge variant="mono" className="hidden sm:inline-flex items-center gap-1.5 py-1 px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300">
-                <UserIcon className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="font-mono text-xs max-w-[180px] truncate">{user.email}</span>
-              </Badge>
+              {/* Profile Badge */}
+              <Link href="/settings">
+                <Badge variant="mono" className="hidden sm:inline-flex items-center gap-2 py-1 px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt={username || "User Avatar"}
+                      className="h-4 w-4 rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="h-3.5 w-3.5 text-emerald-400" />
+                  )}
+                  {username && <span className="font-mono text-xs font-semibold text-emerald-400">@{username}</span>}
+                  <span className="font-mono text-[11px] text-zinc-400 max-w-[140px] truncate">{user.email}</span>
+                </Badge>
+              </Link>
 
               {/* Logout Action */}
               <LogoutButton />
