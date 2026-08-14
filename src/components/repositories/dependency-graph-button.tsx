@@ -56,7 +56,7 @@ export function DependencyGraphButton({
       <Button
         onClick={handleBuild}
         disabled={isLoading || disabled}
-        className="bg-purple-500 hover:bg-purple-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
+        className="w-full justify-center bg-purple-500 hover:bg-purple-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
       >
         {isLoading ? (
           <>

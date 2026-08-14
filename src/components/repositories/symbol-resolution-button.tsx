@@ -56,7 +56,7 @@ export function SymbolResolutionButton({
       <Button
         onClick={handleResolve}
         disabled={isLoading || disabled}
-        className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
+        className="w-full justify-center bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
       >
         {isLoading ? (
           <>

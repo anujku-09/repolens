@@ -56,7 +56,7 @@ export function ArchitectureScoreButton({
       <Button
         onClick={handleCompute}
         disabled={isLoading || disabled}
-        className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
+        className="w-full justify-center bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
       >
         {isLoading ? (
           <>

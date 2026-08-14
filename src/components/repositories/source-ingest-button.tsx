@@ -57,7 +57,7 @@ export function SourceIngestButton({
       <Button
         onClick={handleIngestSource}
         disabled={isPending || disabled}
-        className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5"
+        className="w-full justify-center bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs h-9 shadow-md gap-1.5 cursor-pointer"
       >
         {isPending ? (
           <>
