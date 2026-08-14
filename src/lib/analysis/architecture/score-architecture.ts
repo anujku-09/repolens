@@ -229,10 +229,10 @@ export async function buildRepositoryArchitectureScore(
     updated_at: new Date().toISOString(),
   };
 
-  // 8. Upsert into public.repository_architecture_scores
+  // 8. Upsert into public.repository_architecture_scores (on conflict update existing record by repository_id)
   const { data: upsertData, error: upsertError } = await supabase
     .from("repository_architecture_scores")
-    .upsert(recordPayload)
+    .upsert(recordPayload, { onConflict: "repository_id" })
     .select("*")
     .single();
 
