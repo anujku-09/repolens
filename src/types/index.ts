@@ -568,3 +568,32 @@ export interface AICodebasePromptContext {
   formattedMarkdownPrompt: string;
   estimatedTokensCount: number;
 }
+
+/**
+ * Feature 12: Guided Repository Onboarding Domain Types
+ */
+export interface OnboardingTourStep {
+  stepNumber: number;
+  title: string;
+  role: string;
+  filePath: string;
+  fileId: string;
+  whyItMatters: string;
+  keySymbols: {
+    name: string;
+    kind: SymbolKind;
+    referenceCount: number;
+  }[];
+  fanIn: number;
+  fanOut: number;
+  aiExplanation: string;
+}
+
+export interface RepositoryOnboardingTour {
+  repositoryId: string;
+  repositoryName: string;
+  totalSteps: number;
+  estimatedTimeMinutes: number;
+  healthScore: number | null;
+  steps: OnboardingTourStep[];
+}

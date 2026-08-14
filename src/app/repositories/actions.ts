@@ -11,6 +11,7 @@ import { buildRepositoryArchitectureScore } from "@/lib/analysis/architecture/sc
 import { analyzeFileImpact } from "@/lib/analysis/impact/analyze-impact";
 import { searchCodebase } from "@/lib/search/codebase-search";
 import { generateAICodebasePromptContext } from "@/lib/ai/codebase-intelligence";
+import { generateRepositoryOnboardingTour } from "@/lib/onboarding/generate-tour";
 import { GitHubRepo, CreateRepositoryInput, CodebaseSearchFilters } from "@/types";
 
 /**
@@ -221,4 +222,14 @@ export async function generateAIContextAction(
     return { success: false, error: "Missing repository ID." };
   }
   return await generateAICodebasePromptContext(repositoryId, fileId, query);
+}
+
+/**
+ * Server Action: Generate Guided Repository Onboarding Tour (Feature 12).
+ */
+export async function generateOnboardingTourAction(repositoryId: string) {
+  if (!repositoryId) {
+    return { success: false, error: "Missing repository ID." };
+  }
+  return await generateRepositoryOnboardingTour(repositoryId);
 }

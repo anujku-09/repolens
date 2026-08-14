@@ -20,6 +20,7 @@ import { ArchitectureScoreButton } from "@/components/repositories/architecture-
 import { SymbolIntelligenceCard } from "@/components/repositories/symbol-intelligence-card";
 import { DependencyMetricsCard } from "@/components/repositories/dependency-metrics-card";
 import { AIIntelligenceCard } from "@/components/repositories/ai-intelligence-card";
+import { GuidedOnboardingTour } from "@/components/repositories/guided-onboarding-tour";
 import { RepositorySearchButton } from "@/components/repositories/repository-search-button";
 import { FileTreeExplorer } from "@/components/repositories/file-tree-explorer";
 import { CodebaseVisualizer } from "@/components/shared/codebase-visualizer";
@@ -478,6 +479,12 @@ export default async function RepositoryDetailsPage({
             )}
           </Card>
         )}
+
+        {/* Feature 12: Guided Repository Onboarding Tour */}
+        <GuidedOnboardingTour
+          repositoryId={repository.id}
+          repositoryName={repository.full_name}
+        />
 
         {/* Feature 11: AI Codebase Intelligence Payload Generator */}
         <AIIntelligenceCard
