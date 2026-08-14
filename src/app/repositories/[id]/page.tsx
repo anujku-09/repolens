@@ -209,23 +209,39 @@ export default async function RepositoryDetailsPage({
         <RepositoryDashboardTabs
           overviewContent={
             <>
-              {/* Sleek Codebase Intelligence Pipeline Stepper Bar */}
-              {isIndexed && (
-                <PipelineStepperBar
-                  repositoryId={repository.id}
-                  isIndexed={isIndexed}
-                  isSourceIngested={isSourceIngested}
-                  sourceCount={sourceCount}
-                  isAstAnalyzed={isAstAnalyzed}
-                  analyzedFilesCount={astSummary?.analyzedFiles}
-                  isGraphBuilt={isGraphBuilt}
-                  edgesCount={serializedGraph.edges.length}
-                  isSymbolsResolved={isSymbolsResolved}
-                  totalDefinedSymbols={symbolSummary?.totalDefinedSymbols}
-                  isScoreComputed={isScoreComputed}
-                  healthScore={archScore?.health_score}
-                />
+              {/* Unindexed Welcome Action Card */}
+              {!isIndexed && (
+                <Card className="border-emerald-500/40 bg-emerald-500/5 p-5 mb-6 text-center font-mono">
+                  <div className="flex flex-col items-center justify-center py-3">
+                    <Database className="h-8 w-8 text-emerald-400 mb-2 animate-bounce" />
+                    <h3 className="text-sm font-bold text-zinc-100">Welcome to RepoLens Intelligence!</h3>
+                    <p className="text-xs text-zinc-400 max-w-md mt-1 mb-4">
+                      Click &quot;Ingest Repository&quot; below to fetch the file tree from GitHub and activate automated analysis.
+                    </p>
+                    <IngestButton
+                      repositoryId={repository.id}
+                      isIndexed={isIndexed}
+                      isIndexing={isIndexing}
+                    />
+                  </div>
+                </Card>
               )}
+
+              {/* Sleek Codebase Intelligence Pipeline Stepper Bar */}
+              <PipelineStepperBar
+                repositoryId={repository.id}
+                isIndexed={isIndexed}
+                isSourceIngested={isSourceIngested}
+                sourceCount={sourceCount}
+                isAstAnalyzed={isAstAnalyzed}
+                analyzedFilesCount={astSummary?.analyzedFiles}
+                isGraphBuilt={isGraphBuilt}
+                edgesCount={serializedGraph.edges.length}
+                isSymbolsResolved={isSymbolsResolved}
+                totalDefinedSymbols={symbolSummary?.totalDefinedSymbols}
+                isScoreComputed={isScoreComputed}
+                healthScore={archScore?.health_score}
+              />
 
               {/* Interactive Ingestion Statistics Grid */}
               <IngestionStatsGrid
