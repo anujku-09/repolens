@@ -132,17 +132,34 @@ export async function updateRepository(
     return { repository: null, error: "Unauthorized" };
   }
 
+  const updatePayload: Record<string, any> = {
+    ...input,
+    updated_at: new Date().toISOString(),
+  };
+
   const { data, error } = await supabase
     .from("repositories")
-    .update({
-      ...input,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", id)
     .select("*")
     .single();
 
   if (error) {
+    // If 'status' column is not in Supabase schema (PGRST204), retry update without 'status'
+    if (error.code === "PGRST204" && "status" in updatePayload) {
+      delete updatePayload.status;
+      const { data: retryData, error: retryError } = await supabase
+        .from("repositories")
+        .update(updatePayload)
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (!retryError) {
+        return { repository: retryData as Repository, error: null };
+      }
+    }
+
     console.error("[updateRepository Error]:", error);
     return { repository: null, error: error.message };
   }
