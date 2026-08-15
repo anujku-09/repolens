@@ -1,6 +1,7 @@
 # 🔍 RepoLens — Modern Codebase Intelligence & Architectural Analytics Platform
 
 [![Vercel Deployment](https://img.shields.io/badge/Deployment-repolens--app.vercel.app-emerald?logo=vercel)](https://repolens-app.vercel.app)
+[![Version](https://img.shields.io/badge/Version-v0.5.0-purple.svg)](package.json)
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.0-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20RLS-emerald?logo=supabase)](https://supabase.com/)
@@ -180,7 +181,23 @@ RepoLens leverages Supabase PostgreSQL with strict Row-Level Security (RLS) poli
 - **Language Support**: Native AST parsing is fully optimized for TypeScript, JavaScript, JSX, TSX, and Python (`.py`). Other languages (Rust, Go, C++) use lightweight structural pattern matching.
 - **Monorepo Workspaces**: Multi-package monorepo root aliases (lerna, pnpm workspaces) are resolved as external modules unless explicit relative paths are defined.
 
-### Future Scope & Roadmap
+### 🚀 Product Version Progression Roadmap
+
+```text
+v0.1 — Basic concept / prototype
+  │
+v0.2 — GitHub + authentication + persistence
+  │
+v0.3 — Repository ingestion + AST + dependency intelligence
+  │
+v0.4 — Impact + search + architecture intelligence
+  │
+v0.5 🎯 [CURRENT RELEASE] — AI context + onboarding + refactoring advisor
+  │
+v1.0 — Production-ready stable release
+```
+
+### Future Scope
 - [ ] **Tree-Sitter WebAssembly Parser**: Multi-language AST parsing engine for Rust, Go, Java, and C++.
 - [ ] **Automated GitHub PR Bot**: Comment change-impact analysis reports directly on GitHub Pull Requests.
 - [ ] **Git History Instability Heatmaps**: Overlay Git commit churn frequency against architectural instability scores.

@@ -64,7 +64,7 @@ export function RepoLensLogo({
             className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-400 border border-emerald-500/30"
             suppressHydrationWarning
           >
-            v0.1
+            v0.5
           </span>
         </div>
       )}
