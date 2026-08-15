@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import { Profile } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -13,56 +16,76 @@ interface NavbarProps {
 }
 
 export function Navbar({ user, profile }: NavbarProps) {
+  const pathname = usePathname();
   const username = profile?.username || (user?.email ? user.email.split("@")[0] : null);
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || null;
 
+  const isDashboard = pathname === "/dashboard";
+  const isRepositories = pathname.startsWith("/repositories");
+  const isSettings = pathname === "/settings";
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/80">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md">
+      <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-900 text-zinc-50 shadow-sm transition-transform group-hover:scale-105 dark:bg-zinc-100 dark:text-zinc-950">
-            <Code2 className="h-5 w-5 stroke-[2.2]" />
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-950 shadow-sm transition-transform group-hover:scale-105">
+            <Code2 className="h-4.5 w-4.5 stroke-[2.2]" />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-mono text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <span className="font-mono text-base sm:text-lg font-bold tracking-tight text-zinc-100">
               RepoLens
             </span>
-            <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+            <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-400">
               v0.1
             </span>
           </div>
         </Link>
 
-        {/* Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium font-mono">
           <Link
             href="/dashboard"
-            className="transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
+            className={`transition-colors py-1 ${
+              isDashboard
+                ? "text-emerald-400 font-semibold underline underline-offset-4 decoration-emerald-500/60"
+                : "text-zinc-400 hover:text-zinc-100"
+            }`}
           >
             Dashboard
           </Link>
           <Link
             href="/repositories"
-            className="transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
+            className={`transition-colors py-1 ${
+              isRepositories
+                ? "text-emerald-400 font-semibold underline underline-offset-4 decoration-emerald-500/60"
+                : "text-zinc-400 hover:text-zinc-100"
+            }`}
           >
             Repositories
           </Link>
           <Link
             href="/settings"
-            className="transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
+            className={`transition-colors py-1 ${
+              isSettings
+                ? "text-emerald-400 font-semibold underline underline-offset-4 decoration-emerald-500/60"
+                : "text-zinc-400 hover:text-zinc-100"
+            }`}
           >
             Settings
           </Link>
         </nav>
 
         {/* Action CTAs / User Profile Status */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Profile Badge */}
               <Link href="/settings">
-                <Badge variant="mono" className="hidden sm:inline-flex items-center gap-2 py-1 px-3 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm">
+                <Badge
+                  variant="mono"
+                  className="hidden sm:inline-flex items-center gap-2 py-1 px-3 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm"
+                >
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -74,9 +97,13 @@ export function Navbar({ user, profile }: NavbarProps) {
                     <UserIcon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                   )}
                   {username ? (
-                    <span className="font-mono text-xs font-semibold text-emerald-400">@{username}</span>
+                    <span className="font-mono text-xs font-semibold text-emerald-400">
+                      @{username}
+                    </span>
                   ) : (
-                    <span className="font-mono text-xs text-zinc-300 max-w-[180px] truncate">{user.email}</span>
+                    <span className="font-mono text-xs text-zinc-300 max-w-[140px] truncate">
+                      {user.email}
+                    </span>
                   )}
                 </Badge>
               </Link>
@@ -87,15 +114,14 @@ export function Navbar({ user, profile }: NavbarProps) {
           ) : (
             <>
               <Link href="/login">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="h-8 text-xs font-mono">
                   Sign In
                 </Button>
               </Link>
               <Link href="/repositories">
-                <Button size="sm" className="gap-1.5">
-                  <GithubIcon className="h-4 w-4" />
-                  <span className="hidden sm:inline">Connect Repository</span>
-                  <span className="sm:hidden">Connect</span>
+                <Button size="sm" className="h-8 gap-1.5 text-xs font-mono bg-zinc-100 text-zinc-950 hover:bg-white">
+                  <GithubIcon className="h-3.5 w-3.5" />
+                  <span>Connect</span>
                 </Button>
               </Link>
             </>
@@ -103,24 +129,36 @@ export function Navbar({ user, profile }: NavbarProps) {
         </div>
       </div>
 
-      {/* Mobile Sub-Navbar for Navigation Links on Mobile screens (< 768px) */}
+      {/* Mobile Navigation Sub-Bar (< 768px) with Active Highlight */}
       {user && (
-        <div className="md:hidden border-t border-zinc-800/80 bg-zinc-950/95 px-4 py-2 flex items-center justify-around text-xs font-mono text-zinc-400">
+        <div className="md:hidden border-t border-zinc-800/80 bg-zinc-950 px-3 py-1.5 flex items-center justify-around text-xs font-mono">
           <Link
             href="/dashboard"
-            className="px-2 py-1 rounded hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+            className={`px-3 py-1 rounded-md transition-colors ${
+              isDashboard
+                ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
+            }`}
           >
             Dashboard
           </Link>
           <Link
             href="/repositories"
-            className="px-2 py-1 rounded hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+            className={`px-3 py-1 rounded-md transition-colors ${
+              isRepositories
+                ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
+            }`}
           >
             Repositories
           </Link>
           <Link
             href="/settings"
-            className="px-2 py-1 rounded hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+            className={`px-3 py-1 rounded-md transition-colors ${
+              isSettings
+                ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
+            }`}
           >
             Settings
           </Link>
