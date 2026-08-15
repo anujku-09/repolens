@@ -126,7 +126,7 @@ export default async function RepositoryDetailsPage({
       <Navbar user={user} profile={profile} />
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
         {/* Navigation Breadcrumb */}
-        <div className="mb-6">
+        <div className="mb-4">
           <Link
             href="/repositories"
             className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
@@ -137,7 +137,7 @@ export default async function RepositoryDetailsPage({
         </div>
 
         {/* Repository Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-zinc-800 pb-6 mb-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-zinc-800 pb-5 mb-5">
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-mono font-bold text-zinc-100">
@@ -271,7 +271,7 @@ export default async function RepositoryDetailsPage({
               {isGraphBuilt && serializedGraph.summary ? (
                 <DependencyMetricsCard summary={serializedGraph.summary} />
               ) : (
-                <Card className="border-purple-500/30 bg-purple-500/5 p-5 mb-8 text-center font-mono">
+                <Card className="border-purple-500/30 bg-purple-500/5 p-5 mb-5 text-center font-mono">
                   <div className="flex flex-col items-center justify-center py-4">
                     <GitFork className="h-8 w-8 text-purple-400 mb-2" />
                     <h3 className="text-sm font-semibold text-zinc-200">Dependency Network Graph Pending</h3>
@@ -283,7 +283,7 @@ export default async function RepositoryDetailsPage({
               )}
 
               {/* Codebase Dependency Network Visualizer */}
-              <div className="mb-8">
+              <div className="mb-5">
                 <div className="flex items-center justify-between mb-3 font-mono">
                   <h2 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
                     <Boxes className="h-4 w-4 text-purple-400" />
@@ -305,7 +305,7 @@ export default async function RepositoryDetailsPage({
               {isSymbolsResolved && symbolSummary ? (
                 <SymbolIntelligenceCard symbolSummary={symbolSummary} />
               ) : (
-                <Card className="border-amber-500/30 bg-amber-500/5 p-5 mb-8 text-center font-mono">
+                <Card className="border-amber-500/30 bg-amber-500/5 p-5 mb-5 text-center font-mono">
                   <div className="flex flex-col items-center justify-center py-4">
                     <Code2 className="h-8 w-8 text-amber-400 mb-2" />
                     <h3 className="text-sm font-semibold text-zinc-200">Symbol Intelligence Mapping Pending</h3>

@@ -44,7 +44,7 @@ export function DependencyMetricsCard({ summary }: DependencyMetricsCardProps) {
 
   return (
     <>
-      <Card className="border-purple-500/30 bg-purple-500/5 p-5 mb-8">
+      <Card className="border-purple-500/30 bg-purple-500/5 p-5 mb-5 font-sans">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <GitFork className="h-4 w-4 text-purple-400" />

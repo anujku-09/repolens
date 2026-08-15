@@ -36,7 +36,7 @@ export function IngestionStatsGrid({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 font-sans">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5 font-sans">
       {/* Total Files Card */}
       <Card
         onClick={handleOpenExplorerTab}

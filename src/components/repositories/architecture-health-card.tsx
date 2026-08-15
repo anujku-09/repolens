@@ -29,7 +29,7 @@ export function ArchitectureHealthCard({
 
   if (!isScoreComputed || !archScore) {
     return (
-      <Card className="border-zinc-800/80 bg-zinc-900/30 p-5 mb-8 text-center font-mono">
+      <Card className="border-zinc-800/80 bg-zinc-900/30 p-5 mb-5 text-center font-mono">
         <div className="flex flex-col items-center justify-center py-4">
           <ShieldCheck className="h-8 w-8 text-zinc-600 mb-2" />
           <h3 className="text-sm font-semibold text-zinc-300">
@@ -47,7 +47,7 @@ export function ArchitectureHealthCard({
 
   return (
     <>
-      <Card className="border-emerald-500/30 bg-emerald-500/5 p-5 mb-8 font-sans">
+      <Card className="border-emerald-500/30 bg-emerald-500/5 p-5 mb-5 font-sans">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-emerald-500/20 pb-4">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono font-bold text-xl shadow-inner">

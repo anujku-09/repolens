@@ -38,7 +38,7 @@ export function RepositoryDashboardTabs({
   }, []);
 
   return (
-    <div className="w-full space-y-6 font-sans">
+    <div className="w-full space-y-4 font-sans">
       {/* Sub-Navigation Tabs Header */}
       <div className="flex items-center gap-2 border-b border-zinc-800 pb-3 font-mono text-xs overflow-x-auto custom-scrollbar">
         <button

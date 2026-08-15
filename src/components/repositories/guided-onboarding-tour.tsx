@@ -73,7 +73,7 @@ export function GuidedOnboardingTour({
   return (
     <>
       {/* Onboarding Tour Trigger Card */}
-      <Card className="border-indigo-500/30 bg-indigo-500/5 p-5 mb-8 font-sans">
+      <Card className="border-indigo-500/30 bg-indigo-500/5 p-5 mb-5 font-sans">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0 font-bold">

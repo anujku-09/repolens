@@ -124,7 +124,7 @@ export function PipelineStepperBar({
   ];
 
   return (
-    <div className="w-full mb-8 font-sans">
+    <div className="w-full mb-5 font-sans">
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm backdrop-blur-sm">
         <div className="flex items-center justify-between mb-3 border-b border-zinc-800/80 pb-2.5 px-1 font-mono">
           <div className="flex items-center gap-2">
