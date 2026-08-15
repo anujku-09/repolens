@@ -14,11 +14,11 @@ export function RepoLensLogo({
   showGlow = false,
 }: RepoLensLogoProps) {
   const iconSizes = {
-    sm: "h-7 w-7 rounded-lg p-0.5",
-    md: "h-8.5 w-8.5 rounded-xl p-1",
-    lg: "h-12 w-12 rounded-xl p-1.5",
-    xl: "h-16 w-16 rounded-2xl p-2",
-    hero: "h-24 w-24 sm:h-28 sm:w-28 rounded-3xl p-3",
+    sm: "h-9 w-9 rounded-xl p-0.5",
+    md: "h-10 w-10 rounded-xl p-0.5",
+    lg: "h-13 w-13 rounded-2xl p-1",
+    xl: "h-16 w-16 rounded-2xl p-1.5",
+    hero: "h-24 w-24 sm:h-28 sm:w-28 rounded-3xl p-2",
   };
 
   const textSizes = {

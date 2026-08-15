@@ -31,7 +31,7 @@ export function Navbar({ user, profile }: NavbarProps) {
       <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link href="/">
-          <RepoLensLogo size="sm" />
+          <RepoLensLogo size="md" />
         </Link>
 
         {/* Desktop Navigation Links */}
