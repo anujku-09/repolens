@@ -1,5 +1,6 @@
 # 🔍 RepoLens — Modern Codebase Intelligence & Architectural Analytics Platform
 
+[![Vercel Deployment](https://img.shields.io/badge/Deployment-repolens--app.vercel.app-emerald?logo=vercel)](https://repolens-app.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.0-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20RLS-emerald?logo=supabase)](https://supabase.com/)
@@ -7,6 +8,8 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **RepoLens** is a deterministic, AST-powered codebase intelligence platform designed to help developers, architects, and engineering teams understand, navigate, and refactor complex software repositories without AI hallucinations or heavy cloud compute dependencies.
+> 
+> **Live Production App**: [https://repolens-app.vercel.app](https://repolens-app.vercel.app)
 
 ---
 
@@ -143,7 +146,8 @@ RepoLens leverages Supabase PostgreSQL with strict Row-Level Security (RLS) poli
 
 2. **🕸️ Dependency Network Canvas**:
    - High-performance interactive SVG dependency graph visualizer.
-   - Fan-In / Fan-Out metrics, ring/column layout modes, and live node selection.
+   - Live demo mode populated automatically on the public landing page ([`https://repolens-app.vercel.app`](https://repolens-app.vercel.app)).
+   - Fan-In / Fan-Out metrics, Concentric Rings & Architectural Columns layout modes, and live node selection.
 
 3. **🧩 Symbols & AI Refactoring Advisor**:
    - Cross-file symbol definition and usage mapping with unused export detection.
@@ -185,4 +189,4 @@ RepoLens leverages Supabase PostgreSQL with strict Row-Level Security (RLS) poli
 
 ## 📜 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for full licensing rights and terms.
