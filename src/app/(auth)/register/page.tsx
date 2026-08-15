@@ -82,7 +82,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 font-sans text-zinc-100">
-      <Card className="w-full max-w-md border-zinc-800 bg-zinc-900/70 p-6 shadow-2xl backdrop-blur-md">
+      <Card className="w-full max-w-md border-zinc-800 bg-zinc-900/70 p-5 sm:p-6 shadow-2xl backdrop-blur-md">
         <CardHeader className="text-center p-0 mb-6">
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-950 mb-3 shadow-sm">
             <Code2 className="h-5 w-5" />

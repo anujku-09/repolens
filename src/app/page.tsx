@@ -71,10 +71,10 @@ export default async function Home() {
             </div>
 
             {/* Minimal Command Bar Prompt */}
-            <div className="mt-10 inline-flex items-center gap-2 rounded-lg border border-zinc-800/80 bg-zinc-900/60 px-4 py-2 text-xs font-mono text-zinc-400 max-w-md mx-auto">
+            <div className="mt-10 inline-flex items-center gap-2 rounded-lg border border-zinc-800/80 bg-zinc-900/60 px-4 py-2 text-[11px] sm:text-xs font-mono text-zinc-400 max-w-full sm:max-w-md mx-auto overflow-x-auto custom-scrollbar">
               <Terminal className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <span className="text-zinc-500">$</span>
-              <span className="text-zinc-300">npx repolens scan github.com/owner/repository</span>
+              <span className="text-zinc-300 whitespace-nowrap">npx repolens scan github.com/owner/repository</span>
             </div>
           </div>
         </section>

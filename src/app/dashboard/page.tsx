@@ -28,9 +28,9 @@ export default async function DashboardPage() {
               <span>Authenticated</span>
             </Badge>
           </div>
-          <div className="flex items-center gap-2 mt-1 text-sm text-zinc-400">
+          <div className="flex items-center gap-2 mt-1 text-sm text-zinc-400 flex-wrap">
             <span>Logged in as:</span>
-            <span className="font-mono text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+            <span className="font-mono text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 truncate max-w-[200px] sm:max-w-none">
               {user?.email ?? "User"}
             </span>
           </div>
