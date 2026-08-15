@@ -16,16 +16,16 @@ export function RepoLensLogo({
   showGlow = false,
 }: RepoLensLogoProps) {
   const iconSizes = {
-    sm: "h-9 w-9 p-0.5",
-    md: "h-10 w-10 p-0.5",
-    lg: "h-13 w-13 p-1",
-    xl: "h-16 w-16 p-1",
-    hero: "h-24 w-24 sm:h-28 sm:w-28 p-1.5",
+    sm: "h-9 w-9",
+    md: "h-11 w-11",
+    lg: "h-14 w-14",
+    xl: "h-18 w-18",
+    hero: "h-28 w-28 sm:h-32 sm:w-32",
   };
 
   const textSizes = {
     sm: "text-base",
-    md: "text-lg",
+    md: "text-xl",
     lg: "text-2xl",
     xl: "text-3xl sm:text-4xl",
     hero: "text-3xl sm:text-5xl font-extrabold",
@@ -33,8 +33,8 @@ export function RepoLensLogo({
 
   return (
     <div className={`flex items-center gap-3 group ${className}`} suppressHydrationWarning>
-      {/* Circular Brand Icon Badge with Multi-Layer Glow */}
-      <div className="relative" suppressHydrationWarning>
+      {/* Seamless Circular Brand Icon without outer artificial black border */}
+      <div className="relative flex items-center justify-center" suppressHydrationWarning>
         {(showGlow || size === "hero" || size === "xl") && (
           <div
             className="absolute inset-0 -m-3 rounded-full bg-emerald-500/25 blur-2xl animate-pulse pointer-events-none"
@@ -43,14 +43,14 @@ export function RepoLensLogo({
         )}
         <div
           suppressHydrationWarning
-          className={`relative flex items-center justify-center rounded-full bg-zinc-950 border border-emerald-500/40 shadow-2xl shadow-emerald-500/20 transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-400 ${iconSizes[size]}`}
+          className={`relative flex items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105 ${iconSizes[size]}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.png"
             alt="RepoLens Logo"
             suppressHydrationWarning
-            className="h-full w-full object-contain rounded-full"
+            className="h-full w-full object-contain rounded-full drop-shadow-[0_0_12px_rgba(16,185,129,0.35)]"
           />
         </div>
       </div>
