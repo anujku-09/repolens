@@ -62,6 +62,14 @@ export function CodebaseVisualizer({
   const [showConnectedOnly, setShowConnectedOnly] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("concentric");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"graph" | "inspector">("graph");
+
+  // Auto-adjust initial scale for mobile viewports (< 640px)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 640) {
+      setZoomLevel(0.85);
+    }
+  }, []);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -306,6 +314,28 @@ export function CodebaseVisualizer({
     setIsDragging(false);
   };
 
+  // Touch Drag / Pan Handlers for Mobile Screens
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setIsDragging(true);
+      setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setPan({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   const resetView = () => {
     setZoomLevel(1);
     setPan({ x: 0, y: 0 });
@@ -386,6 +416,34 @@ export function CodebaseVisualizer({
         </div>
       </div>
 
+      {/* Mobile View Tab Switcher (< lg) */}
+      <div className="flex lg:hidden items-center bg-zinc-950 border-b border-zinc-800 p-1 font-mono text-xs shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileTab("graph")}
+          className={`flex-1 py-1.5 text-center rounded-md font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+            mobileTab === "graph"
+              ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+              : "text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <GitBranch className="h-3.5 w-3.5" />
+          <span>Network Canvas</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab("inspector")}
+          className={`flex-1 py-1.5 text-center rounded-md font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+            mobileTab === "inspector"
+              ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+              : "text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <Info className="h-3.5 w-3.5" />
+          <span>Module Inspector {selectedNode ? `(${selectedNode.name})` : ""}</span>
+        </button>
+      </div>
+
       {/* Main Graph Canvas & Inspector Layout */}
       <div className={`grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-hidden ${isFullscreen ? "h-[calc(100vh-57px)]" : "h-[560px] sm:h-[640px] lg:h-[740px] xl:h-[780px]"}`}>
         {/* Left Interactive SVG Canvas */}
@@ -395,9 +453,12 @@ export function CodebaseVisualizer({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          className={`lg:col-span-8 border-b lg:border-b-0 lg:border-r border-zinc-800/80 bg-zinc-950 p-4 relative flex flex-col justify-between overflow-hidden ${
-            isDragging ? "cursor-grabbing" : "cursor-grab"
-          }`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className={`lg:col-span-8 border-b lg:border-b-0 lg:border-r border-zinc-800/80 bg-zinc-950 p-3 sm:p-4 relative flex-col justify-between overflow-hidden ${
+            mobileTab === "graph" ? "flex" : "hidden lg:flex"
+          } ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
         >
           {/* Canvas Search & Mode Controls Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2 z-20 pointer-events-auto">
@@ -649,6 +710,9 @@ export function CodebaseVisualizer({
                     onMouseLeave={() => setHoveredNodeId(null)}
                     className="cursor-pointer transition-opacity duration-300"
                   >
+                    {/* Transparent touch hit area for mobile finger tapping */}
+                    <circle r="26" fill="transparent" />
+
                     {/* Glowing Selection / Target Aura */}
                     {(isSelected || isTargetNode) && (
                       <circle
@@ -700,6 +764,19 @@ export function CodebaseVisualizer({
                 </div>
               </div>
             )}
+            {/* Mobile Inspector Floating Action Pill (< lg) */}
+            {selectedNode && (
+              <div className="lg:hidden absolute bottom-12 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("inspector")}
+                  className="px-3.5 py-1.5 rounded-full bg-purple-600 text-white shadow-xl flex items-center gap-2 text-xs font-mono font-semibold border border-purple-400/50 hover:bg-purple-500 transition-all animate-bounce"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                  <span>Inspect &quot;{selectedNode.name}&quot; &rarr;</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="pt-2 text-[11px] font-mono text-zinc-500 flex justify-between items-center z-10 pointer-events-auto">
@@ -712,7 +789,11 @@ export function CodebaseVisualizer({
         </div>
 
         {/* Right Inspector Pane: Selected Node Dependency Details */}
-        <div className="lg:col-span-4 bg-zinc-900/40 p-4 md:p-5 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+        <div
+          className={`lg:col-span-4 bg-zinc-900/40 p-4 md:p-5 flex-col justify-between font-mono text-xs overflow-y-auto ${
+            mobileTab === "inspector" ? "flex" : "hidden lg:flex"
+          }`}
+        >
           {selectedNode ? (
             <div className="space-y-4">
               <div className="border-b border-zinc-800 pb-3">

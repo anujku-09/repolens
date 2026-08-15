@@ -121,41 +121,64 @@ export function Navbar({ user, profile }: NavbarProps) {
         </div>
       </div>
 
-      {/* Mobile Navigation Sub-Bar (< 768px) with Active Highlight */}
-      {user && (
-        <div className="md:hidden border-t border-zinc-800/80 bg-zinc-950 px-3 py-1.5 flex items-center justify-around text-xs font-mono">
-          <Link
-            href="/dashboard"
-            className={`px-3 py-1 rounded-md transition-colors ${
-              isDashboard
-                ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
-            }`}
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/repositories"
-            className={`px-3 py-1 rounded-md transition-colors ${
-              isRepositories
-                ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
-            }`}
-          >
-            Repositories
-          </Link>
-          <Link
-            href="/settings"
-            className={`px-3 py-1 rounded-md transition-colors ${
-              isSettings
-                ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
-            }`}
-          >
-            Settings
-          </Link>
-        </div>
-      )}
+      {/* Mobile Navigation Sub-Bar (< 768px) */}
+      <div className="md:hidden border-t border-zinc-800/80 bg-zinc-950 px-3 py-1.5 flex items-center justify-around text-xs font-mono">
+        {user ? (
+          <>
+            <Link
+              href="/dashboard"
+              className={`px-3 py-1 rounded-md transition-colors ${
+                isDashboard
+                  ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
+              }`}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/repositories"
+              className={`px-3 py-1 rounded-md transition-colors ${
+                isRepositories
+                  ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
+              }`}
+            >
+              Repositories
+            </Link>
+            <Link
+              href="/settings"
+              className={`px-3 py-1 rounded-md transition-colors ${
+                isSettings
+                  ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 border border-transparent"
+              }`}
+            >
+              Settings
+            </Link>
+          </>
+        ) : (
+          <>
+            <a
+              href="#visualizer"
+              className="px-3 py-1 text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              Live Demo
+            </a>
+            <a
+              href="#features"
+              className="px-3 py-1 text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              Features
+            </a>
+            <Link
+              href="/repositories"
+              className="px-3 py-1 text-emerald-400 font-semibold"
+            >
+              Get Started
+            </Link>
+          </>
+        )}
+      </div>
     </header>
   );
 }
