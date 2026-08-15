@@ -14,11 +14,11 @@ export function RepoLensLogo({
   showGlow = false,
 }: RepoLensLogoProps) {
   const iconSizes = {
-    sm: "h-9 w-9 rounded-xl p-0.5",
-    md: "h-10 w-10 rounded-xl p-0.5",
-    lg: "h-13 w-13 rounded-2xl p-1",
-    xl: "h-16 w-16 rounded-2xl p-1.5",
-    hero: "h-24 w-24 sm:h-28 sm:w-28 rounded-3xl p-2",
+    sm: "h-9 w-9 rounded-full p-0.5",
+    md: "h-10 w-10 rounded-full p-0.5",
+    lg: "h-13 w-13 rounded-full p-1",
+    xl: "h-16 w-16 rounded-full p-1.5",
+    hero: "h-24 w-24 sm:h-28 sm:w-28 rounded-full p-2",
   };
 
   const textSizes = {
@@ -37,13 +37,13 @@ export function RepoLensLogo({
           <div className="absolute inset-0 -m-3 rounded-full bg-emerald-500/25 blur-2xl animate-pulse pointer-events-none" />
         )}
         <div
-          className={`relative flex items-center justify-center bg-zinc-950 border border-emerald-500/40 shadow-2xl shadow-emerald-500/20 transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-400 ${iconSizes[size]}`}
+          className={`relative flex items-center justify-center bg-zinc-950 border border-emerald-500/40 shadow-2xl shadow-emerald-500/20 transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-400 rounded-full ${iconSizes[size]}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/repolens-icon.png"
             alt="RepoLens Logo Icon"
-            className="h-full w-full object-cover rounded-xl shadow-inner"
+            className="h-full w-full object-cover rounded-full shadow-inner"
           />
         </div>
       </div>
