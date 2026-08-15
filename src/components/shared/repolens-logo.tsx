@@ -49,6 +49,7 @@ export function RepoLensLogo({
           <img
             src="/logo.png"
             alt="RepoLens Logo"
+            decoding="async"
             suppressHydrationWarning
             className="h-full w-full object-contain rounded-full drop-shadow-[0_0_12px_rgba(16,185,129,0.35)]"
           />
