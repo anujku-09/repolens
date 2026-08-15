@@ -44,7 +44,7 @@ export function RepoLensLogo({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/repolens-icon.png"
+            src="/logo.png"
             alt="RepoLens Logo Icon"
             suppressHydrationWarning
             className="h-full w-full object-cover rounded-full shadow-inner"

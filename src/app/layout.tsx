@@ -18,10 +18,10 @@ export const metadata: Metadata = {
     "RepoLens automatically parses GitHub repositories into interactive AST graphs, cross-module symbol maps, and architectural health scores.",
   icons: {
     icon: [
-      { url: "/repolens-icon.png", type: "image/png" },
+      { url: "/logo.png", type: "image/png" },
     ],
-    shortcut: "/repolens-icon.png",
-    apple: "/repolens-icon.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
   keywords: [
     "RepoLens",
@@ -44,9 +44,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <head>
-        <link rel="icon" href="/repolens-icon.png" type="image/png" sizes="any" />
-        <link rel="shortcut icon" href="/repolens-icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/repolens-icon.png" />
+        <link rel="icon" href="/logo.png" type="image/png" sizes="any" />
+        <link rel="shortcut icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
       </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30 selection:text-emerald-200">
         {children}
