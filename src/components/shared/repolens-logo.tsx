@@ -29,9 +29,9 @@ export function RepoLensLogo({
       <div className={`relative flex items-center justify-center rounded-xl bg-zinc-950 p-1 border border-emerald-500/40 shadow-lg shadow-emerald-500/10 transition-transform group-hover:scale-105 ${iconSizes[size]}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/repolens-icon.svg"
+          src="/repolens-icon.png"
           alt="RepoLens Logo Icon"
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover rounded-lg"
         />
       </div>
 
