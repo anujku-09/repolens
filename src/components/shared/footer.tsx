@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Code2 } from "lucide-react";
+import { RepoLensLogo } from "@/components/shared/repolens-logo";
 
 export function Footer() {
   return (
@@ -8,13 +8,8 @@ export function Footer() {
         <div className="flex flex-col items-center justify-between gap-5 sm:flex-row text-center sm:text-left">
           {/* Left Brand */}
           <div className="flex items-center justify-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-zinc-100 text-zinc-950 shrink-0">
-              <Code2 className="h-4 w-4" />
-            </div>
-            <span className="font-mono text-sm font-bold text-zinc-100">
-              RepoLens
-            </span>
-            <span className="text-xs text-zinc-500 font-mono hidden xs:inline">
+            <RepoLensLogo size="sm" />
+            <span className="text-xs text-zinc-500 font-mono hidden xs:inline ml-2">
               — Codebase Intelligence Platform
             </span>
           </div>

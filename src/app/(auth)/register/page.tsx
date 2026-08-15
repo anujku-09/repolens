@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { GithubButton } from "@/components/auth/github-button";
-import { Code2, Loader2, AlertCircle, CheckCircle2, Mail } from "lucide-react";
+import { RepoLensLogo } from "@/components/shared/repolens-logo";
+import { Loader2, AlertCircle, Mail } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -84,9 +85,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 font-sans text-zinc-100">
       <Card className="w-full max-w-md border-zinc-800 bg-zinc-900/70 p-5 sm:p-6 shadow-2xl backdrop-blur-md">
         <CardHeader className="text-center p-0 mb-6">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-950 mb-3 shadow-sm">
-            <Code2 className="h-5 w-5" />
-          </div>
+          <RepoLensLogo iconOnly size="lg" className="justify-center mb-3" />
           <CardTitle className="text-2xl font-bold tracking-tight text-zinc-100">
             Create your Account
           </CardTitle>

@@ -10,6 +10,8 @@ import { LogoutButton } from "@/components/shared/logout-button";
 import { Code2, User as UserIcon } from "lucide-react";
 import { GithubIcon } from "@/components/ui/icons";
 
+import { RepoLensLogo } from "@/components/shared/repolens-logo";
+
 interface NavbarProps {
   user?: User | null;
   profile?: Profile | null;
@@ -28,18 +30,8 @@ export function Navbar({ user, profile }: NavbarProps) {
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-950 shadow-sm transition-transform group-hover:scale-105">
-            <Code2 className="h-4.5 w-4.5 stroke-[2.2]" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono text-base sm:text-lg font-bold tracking-tight text-zinc-100">
-              RepoLens
-            </span>
-            <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-400">
-              v0.1
-            </span>
-          </div>
+        <Link href="/">
+          <RepoLensLogo size="sm" />
         </Link>
 
         {/* Desktop Navigation Links */}
