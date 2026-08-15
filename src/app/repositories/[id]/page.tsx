@@ -140,7 +140,7 @@ export default async function RepositoryDetailsPage({
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-zinc-800 pb-5 mb-5">
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-mono font-bold text-zinc-100">
+              <h1 className="text-xl sm:text-3xl font-mono font-bold text-zinc-100 break-all sm:break-normal">
                 {repository.full_name}
               </h1>
 

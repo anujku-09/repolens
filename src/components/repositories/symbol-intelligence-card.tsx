@@ -96,9 +96,9 @@ export function SymbolIntelligenceCard({
   return (
     <>
       <Card className="border-amber-500/30 bg-amber-500/5 p-5 mb-5 font-sans">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 mb-4">
           <div className="flex items-center gap-2">
-            <Code2 className="h-4 w-4 text-amber-400" />
+            <Code2 className="h-4 w-4 text-amber-400 shrink-0" />
             <h3 className="text-sm font-semibold text-zinc-100">
               Symbol Definition & Usage Intelligence
             </h3>
@@ -112,19 +112,19 @@ export function SymbolIntelligenceCard({
               }}
               className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
             >
-              <AlertTriangle className="h-3 w-3 text-amber-400" />
+              <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0" />
               <span>{symbolSummary.unusedExportsCount} Unused Export(s) &bull; View All &rarr;</span>
             </button>
           ) : (
             <div className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30">
-              <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+              <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />
               <span>0 Unused Exports (100% Referenced)</span>
             </div>
           )}
         </div>
 
         {/* 4 Interactive Metric Cards with Distinct Modals */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono mb-4">
           {/* Card 1: Defined Symbols */}
           <div
             onClick={() => {

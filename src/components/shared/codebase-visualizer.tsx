@@ -406,7 +406,7 @@ export function CodebaseVisualizer({
               />
             </div>
 
-            <div className="flex items-center gap-1.5 font-mono text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
               {/* Layout Mode Selector (Concentric vs Columns) */}
               <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-md p-0.5 text-zinc-400">
                 <button

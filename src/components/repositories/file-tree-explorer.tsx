@@ -416,7 +416,7 @@ export function FileTreeExplorer({
       {/* Right Column: File Detail Inspector Panel */}
       <Card className="lg:col-span-5 border-zinc-800 bg-zinc-900/50 p-5 flex flex-col justify-between">
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-zinc-800">
             <div className="flex items-center gap-2">
               <HardDrive className="h-4 w-4 text-emerald-400" />
               <h3 className="text-sm font-semibold text-zinc-100">Specific File Inspector</h3>

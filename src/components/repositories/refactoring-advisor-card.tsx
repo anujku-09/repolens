@@ -91,7 +91,7 @@ export function RefactoringAdvisorCard({ repositoryId }: RefactoringAdvisorCardP
         <Button
           onClick={handleGenerateReport}
           disabled={isPending}
-          className="bg-purple-500 hover:bg-purple-400 text-zinc-950 font-bold text-xs h-9 px-4 shadow-lg gap-2 cursor-pointer font-mono shrink-0"
+          className="w-full sm:w-auto bg-purple-500 hover:bg-purple-400 text-zinc-950 font-bold text-xs h-9 px-4 shadow-lg gap-2 cursor-pointer font-mono shrink-0 justify-center"
         >
           {isPending ? (
             <>

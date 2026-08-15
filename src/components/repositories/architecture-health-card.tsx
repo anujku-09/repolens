@@ -86,7 +86,7 @@ export function ArchitectureHealthCard({
         </div>
 
         {/* 4 Interactive Sub-Scores Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono mb-6">
           {/* Coupling Card */}
           <div
             onClick={() => setActiveMetricModal("coupling")}

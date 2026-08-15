@@ -68,11 +68,11 @@ export function AIIntelligenceCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button
             onClick={handleGenerateAIContext}
             disabled={isPending}
-            className="bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-semibold text-xs h-8 px-3 shadow-md gap-1.5 cursor-pointer font-mono"
+            className="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-semibold text-xs h-8.5 px-3.5 shadow-md gap-1.5 cursor-pointer font-mono justify-center"
           >
             {isPending ? (
               <>
@@ -92,7 +92,7 @@ export function AIIntelligenceCard({
               onClick={handleCopyContext}
               variant="outline"
               size="sm"
-              className="h-8 px-3 text-xs font-mono gap-1.5 text-zinc-200 hover:text-zinc-100 bg-zinc-900 border-zinc-700 cursor-pointer"
+              className="w-full sm:w-auto h-8.5 px-3.5 text-xs font-mono gap-1.5 text-zinc-200 hover:text-zinc-100 bg-zinc-900 border-zinc-700 cursor-pointer justify-center"
             >
               {isCopied ? (
                 <>
