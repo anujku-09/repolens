@@ -16,11 +16,11 @@ export function RepoLensLogo({
   showGlow = false,
 }: RepoLensLogoProps) {
   const iconSizes = {
-    sm: "h-9 w-9 rounded-full p-0.5",
-    md: "h-10 w-10 rounded-full p-0.5",
-    lg: "h-13 w-13 rounded-full p-1",
-    xl: "h-16 w-16 rounded-full p-1.5",
-    hero: "h-24 w-24 sm:h-28 sm:w-28 rounded-full p-2",
+    sm: "h-9 w-9 p-0.5",
+    md: "h-10 w-10 p-0.5",
+    lg: "h-13 w-13 p-1",
+    xl: "h-16 w-16 p-1",
+    hero: "h-24 w-24 sm:h-28 sm:w-28 p-1.5",
   };
 
   const textSizes = {
@@ -33,21 +33,24 @@ export function RepoLensLogo({
 
   return (
     <div className={`flex items-center gap-3 group ${className}`} suppressHydrationWarning>
-      {/* Brand Vector Icon Badge with Multi-Layer Glow */}
+      {/* Circular Brand Icon Badge with Multi-Layer Glow */}
       <div className="relative" suppressHydrationWarning>
         {(showGlow || size === "hero" || size === "xl") && (
-          <div className="absolute inset-0 -m-3 rounded-full bg-emerald-500/25 blur-2xl animate-pulse pointer-events-none" suppressHydrationWarning />
+          <div
+            className="absolute inset-0 -m-3 rounded-full bg-emerald-500/25 blur-2xl animate-pulse pointer-events-none"
+            suppressHydrationWarning
+          />
         )}
         <div
           suppressHydrationWarning
-          className={`relative flex items-center justify-center bg-zinc-950 border border-emerald-500/40 shadow-2xl shadow-emerald-500/20 transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-400 rounded-full ${iconSizes[size]}`}
+          className={`relative flex items-center justify-center rounded-full bg-zinc-950 border border-emerald-500/40 shadow-2xl shadow-emerald-500/20 transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-400 ${iconSizes[size]}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.png"
-            alt="RepoLens Logo Icon"
+            alt="RepoLens Logo"
             suppressHydrationWarning
-            className="h-full w-full object-cover rounded-full shadow-inner"
+            className="h-full w-full object-contain rounded-full"
           />
         </div>
       </div>
@@ -57,7 +60,10 @@ export function RepoLensLogo({
           <span className={`font-bold tracking-tight text-zinc-100 ${textSizes[size]}`} suppressHydrationWarning>
             Repo<span className="text-emerald-400">Lens</span>
           </span>
-          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-400 border border-emerald-500/30" suppressHydrationWarning>
+          <span
+            className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-400 border border-emerald-500/30"
+            suppressHydrationWarning
+          >
             v0.1
           </span>
         </div>
