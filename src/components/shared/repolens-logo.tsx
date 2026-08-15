@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 interface RepoLensLogoProps {
@@ -30,30 +32,32 @@ export function RepoLensLogo({
   };
 
   return (
-    <div className={`flex items-center gap-3 group ${className}`}>
+    <div className={`flex items-center gap-3 group ${className}`} suppressHydrationWarning>
       {/* Brand Vector Icon Badge with Multi-Layer Glow */}
-      <div className="relative">
+      <div className="relative" suppressHydrationWarning>
         {(showGlow || size === "hero" || size === "xl") && (
-          <div className="absolute inset-0 -m-3 rounded-full bg-emerald-500/25 blur-2xl animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 -m-3 rounded-full bg-emerald-500/25 blur-2xl animate-pulse pointer-events-none" suppressHydrationWarning />
         )}
         <div
+          suppressHydrationWarning
           className={`relative flex items-center justify-center bg-zinc-950 border border-emerald-500/40 shadow-2xl shadow-emerald-500/20 transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-400 rounded-full ${iconSizes[size]}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/repolens-icon.png"
             alt="RepoLens Logo Icon"
+            suppressHydrationWarning
             className="h-full w-full object-cover rounded-full shadow-inner"
           />
         </div>
       </div>
 
       {!iconOnly && (
-        <div className="flex items-center gap-2 font-mono">
-          <span className={`font-bold tracking-tight text-zinc-100 ${textSizes[size]}`}>
+        <div className="flex items-center gap-2 font-mono" suppressHydrationWarning>
+          <span className={`font-bold tracking-tight text-zinc-100 ${textSizes[size]}`} suppressHydrationWarning>
             Repo<span className="text-emerald-400">Lens</span>
           </span>
-          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-400 border border-emerald-500/30">
+          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-400 border border-emerald-500/30" suppressHydrationWarning>
             v0.1
           </span>
         </div>
