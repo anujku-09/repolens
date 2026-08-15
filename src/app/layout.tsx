@@ -13,15 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RepoLens | Understand Your Codebase",
+  title: "RepoLens | Next-Gen Codebase Intelligence Engine",
   description:
-    "RepoLens analyzes GitHub repositories and helps developers understand their architecture and code.",
+    "RepoLens automatically parses GitHub repositories into interactive AST graphs, cross-module symbol maps, and architectural health scores.",
+  icons: {
+    icon: "/repolens-icon.png",
+    shortcut: "/repolens-icon.png",
+    apple: "/repolens-icon.png",
+  },
   keywords: [
+    "RepoLens",
     "Codebase Intelligence",
     "GitHub Analysis",
     "Software Architecture",
-    "Code Understanding",
     "AST Parser",
+    "Dependency Graph",
   ],
 };
 

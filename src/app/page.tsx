@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { getOrCreateProfile } from "@/lib/profiles";
+import { RepoLensLogo } from "@/components/shared/repolens-logo";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -46,9 +47,14 @@ export default async function Home() {
         <section className="relative overflow-hidden pt-12 pb-10 md:pt-16 md:pb-14 border-b border-zinc-900">
           {/* Subtle Background Glow & Grid Pattern */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#18181b_1px,transparent_1px),linear-gradient(to_bottom,#18181b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40 pointer-events-none" />
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/15 blur-[140px] rounded-full pointer-events-none" />
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+            {/* Cinematic RepoLens Hero Brand Showcase */}
+            <div className="flex justify-center mb-6">
+              <RepoLensLogo iconOnly size="hero" showGlow />
+            </div>
+
             {/* Developer Pill Badge */}
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-mono text-emerald-400 mb-5 backdrop-blur-md">
               <Sparkles className="h-3.5 w-3.5" />
