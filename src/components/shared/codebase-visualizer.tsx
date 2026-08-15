@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, MouseEvent } from "react";
 import { SerializedGraphData, ChangeImpactResult } from "@/types";
+import { DEFAULT_DEMO_GRAPH } from "@/lib/constants/demo-graph";
 import { Badge } from "@/components/ui/badge";
 import {
   FileCode,
@@ -65,9 +66,14 @@ export function CodebaseVisualizer({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const nodes = graphData?.nodes || [];
-  const edges = graphData?.edges || [];
-  const summary = graphData?.summary || null;
+  const activeGraph =
+    graphData && graphData.nodes && graphData.nodes.length > 0
+      ? graphData
+      : DEFAULT_DEMO_GRAPH;
+
+  const nodes = activeGraph.nodes || [];
+  const edges = activeGraph.edges || [];
+  const summary = activeGraph.summary || null;
 
   // Listen to browser native fullscreen change events
   useEffect(() => {
