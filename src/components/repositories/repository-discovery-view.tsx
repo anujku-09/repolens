@@ -170,7 +170,7 @@ export function RepositoryDiscoveryView({
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1 font-mono text-xs">
+        <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1 font-mono text-xs overflow-x-auto custom-scrollbar shrink-0">
           <button
             onClick={() => setActiveFilter("all")}
             className={`rounded px-3 py-1.5 transition-colors ${

@@ -102,6 +102,30 @@ export function Navbar({ user, profile }: NavbarProps) {
           )}
         </div>
       </div>
+
+      {/* Mobile Sub-Navbar for Navigation Links on Mobile screens (< 768px) */}
+      {user && (
+        <div className="md:hidden border-t border-zinc-800/80 bg-zinc-950/95 px-4 py-2 flex items-center justify-around text-xs font-mono text-zinc-400">
+          <Link
+            href="/dashboard"
+            className="px-2 py-1 rounded hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/repositories"
+            className="px-2 py-1 rounded hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+          >
+            Repositories
+          </Link>
+          <Link
+            href="/settings"
+            className="px-2 py-1 rounded hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+          >
+            Settings
+          </Link>
+        </div>
+      )}
     </header>
   );
 }
