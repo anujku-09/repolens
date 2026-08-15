@@ -25,16 +25,21 @@ import {
   FileCode,
 } from "lucide-react";
 
+import { getOrCreateProfile } from "@/lib/profiles";
+
 export default async function Home() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Fetch or auto-create user profile in public.profiles
+  const { profile } = user ? await getOrCreateProfile() : { profile: null };
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 font-sans">
       {/* Top Navbar */}
-      <Navbar user={user} />
+      <Navbar user={user} profile={profile} />
 
       <main className="flex-1">
         {/* Hero Section */}
